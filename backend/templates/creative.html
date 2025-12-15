@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: letter;
+            margin: 0;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 10.5pt;
+            line-height: 1.6;
+            color: #2c3e50;
+        }
+        .header-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 50px;
+            margin-bottom: 30px;
+        }
+        .name {
+            font-size: 32pt;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+        .title {
+            font-size: 14pt;
+            font-weight: 400;
+            opacity: 0.95;
+            margin-bottom: 15px;
+        }
+        .contact {
+            font-size: 9.5pt;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 0 50px 30px;
+        }
+        .section {
+            margin-bottom: 28px;
+        }
+        .section-title {
+            font-size: 16pt;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            padding-left: 15px;
+        }
+        .section-title::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .summary {
+            text-align: justify;
+            color: #444;
+            line-height: 1.8;
+            font-size: 11pt;
+        }
+        .experience-item, .project-item, .education-item, .responsibility-item {
+            margin-bottom: 20px;
+            padding-left: 20px;
+            border-left: 2px solid #e0e0e0;
+        }
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 8px;
+        }
+        .item-title {
+            font-weight: 700;
+            font-size: 12pt;
+            color: #667eea;
+        }
+        .item-company, .item-institution {
+            font-weight: 600;
+            color: #555;
+            font-size: 10.5pt;
+            margin-top: 2px;
+        }
+        .item-date {
+            font-size: 9.5pt;
+            color: #888;
+            font-weight: 600;
+            background: #f0f0f0;
+            padding: 3px 8px;
+            border-radius: 3px;
+        }
+        .item-description {
+            color: #444;
+            margin-top: 6px;
+            font-size: 10pt;
+        }
+        .achievements, .duties-list {
+            margin-top: 8px;
+            padding-left: 20px;
+        }
+        .achievements li, .duties-list li {
+            margin-bottom: 5px;
+            color: #444;
+            font-size: 10pt;
+        }
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        .skill-category {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 5px;
+        }
+        .skill-category-name {
+            font-weight: 700;
+            font-size: 10.5pt;
+            color: #667eea;
+            margin-bottom: 6px;
+        }
+        .skill-items {
+            color: #666;
+            font-size: 9.5pt;
+        }
+        .skill-items span {
+            display: inline-block;
+            margin-right: 8px;
+            margin-bottom: 4px;
+        }
+        .project-links {
+            margin-top: 6px;
+            font-size: 9pt;
+            color: #888;
+        }
+        .coding-profile {
+            margin-bottom: 12px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-gradient">
+        <div class="name">{{ resume.name or 'Your Name' }}</div>
+        <div class="title">{{ resume.title or 'Professional Title' }}</div>
+        <div class="contact">
+            {% if resume.contact.email %}<span>{{ resume.contact.email }}</span>{% endif %}
+            {% if resume.contact.phone %}<span>{{ resume.contact.phone }}</span>{% endif %}
+            {% if resume.contact.location %}<span>{{ resume.contact.location }}</span>{% endif %}
+            {% if resume.contact.linkedin %}<span>{{ resume.contact.linkedin }}</span>{% endif %}
+            {% if resume.contact.github %}<span>{{ resume.contact.github }}</span>{% endif %}
+        </div>
+    </div>
+
+    <div class="content">
+        {% if resume.summary %}
+        <div class="section">
+            <div class="section-title">About</div>
+            <div class="summary">{{ resume.summary }}</div>
+        </div>
+        {% endif %}
+
+        {% if resume.experience %}
+        <div class="section">
+            <div class="section-title">Experience</div>
+            {% for exp in resume.experience %}
+            <div class="experience-item">
+                <div class="item-header">
+                    <div>
+                        <div class="item-title">{{ exp.position }}</div>
+                        <div class="item-company">{{ exp.company }}</div>
+                    </div>
+                    <div class="item-date">{{ exp.start_date }} - {{ exp.end_date }}</div>
+                </div>
+                {% if exp.description %}
+                <div class="item-description">{{ exp.description }}</div>
+                {% endif %}
+                {% if exp.achievements %}
+                <ul class="achievements">
+                    {% for achievement in exp.achievements %}
+                    <li>{{ achievement }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if resume.projects %}
+        <div class="section">
+            <div class="section-title">Projects</div>
+            {% for project in resume.projects %}
+            <div class="project-item">
+                <div class="item-header">
+                    <div>
+                        <div class="item-title">{{ project.name }}</div>
+                        {% if project.technologies %}
+                        <div class="item-description">{{ project.technologies|join(', ') }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if project.description %}
+                <div class="item-description">{{ project.description }}</div>
+                {% endif %}
+                {% if project.link or project.code_link or project.live_link %}
+                <div class="project-links">
+                    {% if project.code_link %}Code: {{ project.code_link }}{% endif %}
+                    {% if project.live_link %}{% if project.code_link %} | {% endif %}Live: {{ project.live_link }}{% endif %}
+                    {% if project.link and not project.code_link and not project.live_link %}{{ project.link }}{% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if resume.skills %}
+        <div class="section">
+            <div class="section-title">Skills</div>
+            <div class="skills-grid">
+                {% for skill in resume.skills %}
+                {% if skill.category %}
+                <div class="skill-category">
+                    <div class="skill-category-name">{{ skill.category }}</div>
+                    <div class="skill-items">
+                        {% for item in skill['items'] %}
+                        <span>{{ item }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="skill-category">
+                    <div class="skill-items">{{ skill }}</div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if resume.education %}
+        <div class="section">
+            <div class="section-title">Education</div>
+            {% for edu in resume.education %}
+            <div class="education-item">
+                <div class="item-header">
+                    <div>
+                        <div class="item-title">{{ edu.degree }}{% if edu.field %} in {{ edu.field }}{% endif %}</div>
+                        <div class="item-institution">{{ edu.institution }}</div>
+                    </div>
+                    <div class="item-date">{% if edu.start_date %}{{ edu.start_date }} - {% endif %}{{ edu.end_date }}{% if edu.gpa %} | {{ edu.gpa }}{% endif %}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if resume.achievements %}
+        <div class="section">
+            <div class="section-title">Achievements</div>
+            <ul class="achievements">
+                {% for achievement in resume.achievements %}
+                <li>{{ achievement }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if resume.responsibilities %}
+        <div class="section">
+            <div class="section-title">Leadership</div>
+            {% for resp in resume.responsibilities %}
+            <div class="responsibility-item">
+                <div class="item-header">
+                    <div>
+                        <div class="item-title">{{ resp.role }}</div>
+                        <div class="item-company">{{ resp.organization }}</div>
+                    </div>
+                    {% if resp.duration %}
+                    <div class="item-date">{{ resp.duration }}</div>
+                    {% endif %}
+                </div>
+                {% if resp.duties %}
+                <ul class="duties-list">
+                    {% for duty in resp.duties %}
+                    <li>{{ duty }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if resume.coding_profiles %}
+        <div class="section">
+            <div class="section-title">Coding Profiles</div>
+            {% for profile in resume.coding_profiles %}
+            <div class="coding-profile">
+                <strong style="color: #667eea;">{{ profile.platform }}</strong>
+                {% if profile.rating %} - Rating: {{ profile.rating }}{% endif %}
+                {% if profile.stars %} ({{ profile.stars }}){% endif %}
+                {% if profile.problems_solved %}<br>{{ profile.problems_solved }} problems solved{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if resume.courses %}
+        <div class="section">
+            <div class="section-title">Courses</div>
+            <ul class="achievements">
+                {% for course in resume.courses %}
+                <li>{{ course }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if resume.certifications %}
+        <div class="section">
+            <div class="section-title">Certifications</div>
+            {% for cert in resume.certifications %}
+            <div class="responsibility-item">
+                <div class="item-title">{{ cert.name }}</div>
+                {% if cert.issuer %}<div class="item-description">{{ cert.issuer }}</div>{% endif %}
+                {% if cert.date %}<div class="item-date">{{ cert.date }}</div>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if resume.awards %}
+        <div class="section">
+            <div class="section-title">Awards</div>
+            <ul class="achievements">
+                {% for award in resume.awards %}
+                <li>{{ award }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

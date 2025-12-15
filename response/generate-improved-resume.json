@@ -1,0 +1,238 @@
+{
+  "curriculum_used": [
+    {
+      "addresses_gaps": [
+        "Excel",
+        "Advanced Excel (Power Query)"
+      ],
+      "module": "Introduction to Data Analytics and Excel",
+      "projects_included": [
+        "US Healthcare Dataset Analysis"
+      ],
+      "skills_added_from_module": [],
+      "skills_enhanced_by_module": [
+        "Excel \u2192 Advanced Excel (Power Query)"
+      ]
+    },
+    {
+      "addresses_gaps": [
+        "SQL",
+        "Advanced SQL (CTEs, Window Functions)"
+      ],
+      "module": "Analytics with SQL",
+      "projects_included": [
+        "Retail Store Sales Analysis"
+      ],
+      "skills_added_from_module": [],
+      "skills_enhanced_by_module": [
+        "SQL \u2192 Advanced SQL (CTEs, Window Functions)"
+      ]
+    },
+    {
+      "addresses_gaps": [
+        "Power BI",
+        "DAX",
+        "Power Query",
+        "Data Modeling"
+      ],
+      "module": "Data Visualization with PowerBi",
+      "projects_included": [
+        "E-com Orders Visualization"
+      ],
+      "skills_added_from_module": [
+        "Power BI"
+      ],
+      "skills_enhanced_by_module": []
+    },
+    {
+      "addresses_gaps": [
+        "NumPy",
+        "Pandas",
+        "Matplotlib",
+        "Seaborn"
+      ],
+      "module": "Statistics & EDA with Python",
+      "projects_included": [],
+      "skills_added_from_module": [
+        "NumPy",
+        "Pandas",
+        "Matplotlib",
+        "Seaborn"
+      ],
+      "skills_enhanced_by_module": []
+    }
+  ],
+  "improved": {
+    "ats_score": 85,
+    "job_relevance_score": 75,
+    "modification_summary": "Enhanced 2 existing skills with advanced topics (Excel with Power Query, SQL with CTEs and Window Functions), added 5 new skills from curriculum (Power BI, NumPy, Pandas, Matplotlib, Seaborn), replaced 2 irrelevant projects with 3 curriculum case studies, improving job relevance by 10% and ATS score by 10%, resulting in an estimated overall improvement of 35%.",
+    "projects_added": [
+      "US Healthcare Dataset Analysis",
+      "Retail Store Sales Analysis",
+      "E-com Orders Visualization"
+    ],
+    "resume_text": "MAHIMA MALHOTRA\nEmail: mahima28.malhotra@gmail.com | Mob.: 9899829190 | Location: New Delhi\n\nProfessional Summary\nFresher Data Analyst with expertise in Advanced Excel (Power Query), SQL (CTEs, Window Functions), and Python libraries including NumPy and Pandas. Experienced in machine learning projects and data visualization, seeking to leverage analytical skills and technical knowledge to contribute to data-driven decision making.\n\nTechnical Skills\n\u2022 Programming & Languages: Java, Python, SQL (Advanced SQL with CTEs and Window Functions)\n\u2022 Data Visualization Tools: Power BI, Advanced Excel (Power Query)\n\u2022 Databases: SQL\n\u2022 Python Libraries: NumPy, Pandas, Matplotlib, Seaborn\n\u2022 Other Tools: MATLAB, Jupyter, AutoCad, Smart Plant Instrumentation\n\nEducation\nB.Tech (Instrumentation and Control Engineering), Bharati Vidyapeeth\u2019s College of Engineering, New Delhi, GGSIPU, 2016-20, 82.9%\nClass XII, Rukmini Devi Public School, New Delhi, CBSE, 2015-16, 88.47%\nClass X, Rukmini Devi Public School, New Delhi, CBSE, 2013-14, 10.0 CGPA\n\nProjects\nPneumonia detection from Chest X-ray images using Deep Learning\nTechnologies: Python, Machine Learning\n- Developed a deep learning model for image classification to detect pneumonia from chest X-ray images, improving diagnostic accuracy.\n\nUS Healthcare Dataset Analysis\nTechnologies: Advanced Excel (Power Query), Excel\n- Conducted data cleaning, transformation, and exploratory analysis on healthcare datasets to extract actionable insights.\n\nRetail Store Sales Analysis\nTechnologies: SQL (CTEs, Window Functions)\n- Utilized advanced SQL queries to analyze sales data, generating detailed reports and identifying sales trends.\n\nE-com Orders Visualization\nTechnologies: Power BI, DAX, Power Query\n- Created interactive dashboards to visualize e-commerce order data, enabling better business decision-making.\n\nCertifications\n\u2022 Certification in Industrial Instrumentation \u2013 Indian Oil Corporation Limited\n\u2022 Certification in JAVA - Coding Ninjas\n\u2022 Certification in Machine Learning and Artificial Intelligence - Eckovation\n\u2022 Certification for Event Coordinator \u2013 Industrial Society for Automation\n\u2022 Certification in Data Analytics | Coding Ninjas | 2026",
+    "skills_added": [
+      "Power BI",
+      "NumPy",
+      "Pandas",
+      "Matplotlib",
+      "Seaborn"
+    ],
+    "skills_enhanced": [
+      "Excel \u2192 Advanced Excel (Power Query)",
+      "SQL \u2192 Advanced SQL (CTEs, Window Functions)"
+    ]
+  },
+  "learning_comparison": {
+    "cn_course_learning": {
+      "modules_addressing_gaps": [
+        {
+          "description": "Skill development",
+          "gap": "Power BI",
+          "module": "Data Visualization with PowerBi",
+          "timeline": "Week 1-4"
+        },
+        {
+          "description": "Skill development",
+          "gap": "NumPy",
+          "module": "Statistics & EDA with Python",
+          "timeline": "Week 1-4"
+        },
+        {
+          "description": "Skill development",
+          "gap": "Pandas",
+          "module": "Statistics & EDA with Python",
+          "timeline": "Week 1-4"
+        }
+      ],
+      "timeline": [
+        {
+          "milestone": "Enroll in CN Data Analytics Course",
+          "month": 0,
+          "progress": 0
+        },
+        {
+          "milestone": "SQL Mastery + Python Fundamentals",
+          "month": 1,
+          "progress": 35
+        },
+        {
+          "milestone": "Power BI & Data Visualization",
+          "month": 2,
+          "progress": 60
+        },
+        {
+          "milestone": "Statistical Analysis + Projects",
+          "month": 3,
+          "progress": 80
+        },
+        {
+          "milestone": "Capstone Project + Interview Prep",
+          "month": 4,
+          "progress": 95
+        },
+        {
+          "milestone": "Job Ready + Placement Support",
+          "month": 5,
+          "progress": 100
+        }
+      ]
+    },
+    "conventional_learning": {
+      "timeline": [
+        {
+          "milestone": "Start Learning",
+          "month": 0,
+          "progress": 0
+        },
+        {
+          "milestone": "Basic SQL from YouTube",
+          "month": 2,
+          "progress": 15
+        },
+        {
+          "milestone": "Python basics from blogs",
+          "month": 4,
+          "progress": 30
+        },
+        {
+          "milestone": "Self-made projects",
+          "month": 6,
+          "progress": 50
+        },
+        {
+          "milestone": "Still learning Power BI",
+          "month": 8,
+          "progress": 65
+        },
+        {
+          "milestone": "Job applications start",
+          "month": 10,
+          "progress": 80
+        },
+        {
+          "milestone": "Interview ready",
+          "month": 12,
+          "progress": 85
+        }
+      ]
+    }
+  },
+  "market_stats": {
+    "curriculum_covers": 5,
+    "jobs_analyzed": 89,
+    "resume_has": 3,
+    "top_skills": [
+      {
+        "demand": "Critical",
+        "percentage": 91.01,
+        "skill": "Excel"
+      },
+      {
+        "demand": "Critical",
+        "percentage": 76.4,
+        "skill": "SQL"
+      },
+      {
+        "demand": "Essential",
+        "percentage": 32.58,
+        "skill": "Power BI"
+      },
+      {
+        "demand": "Essential",
+        "percentage": 29.21,
+        "skill": "Python"
+      },
+      {
+        "demand": "Growing",
+        "percentage": 3.37,
+        "skill": "NumPy"
+      }
+    ]
+  },
+  "original": {
+    "analysis_summary": "The resume demonstrates foundational data analytics skills and relevant projects but lacks key tools like Power BI and Pandas; ATS compatibility is decent but could improve with consistent formatting.",
+    "ats_score": 75,
+    "has_skills": [
+      "Java",
+      "SQL",
+      "Python",
+      "Machine Learning",
+      "Excel",
+      "MATLAB",
+      "Jupyter"
+    ],
+    "job_relevance_score": 65,
+    "level_reasoning": "",
+    "missing_skills": [
+      "Power BI",
+      "NumPy",
+      "Pandas",
+      "Matplotlib",
+      "Seaborn"
+    ],
+    "resume_text": "MAHIMA MALHOTRA\nEmail: mahima28.malhotra@gmail.com\nMob.: 9899829190\nA dedicated,hardworking,team-oriented professional capable of working cross-functionally and cross-culturally.Very fast  learner\nand confident towards delivering the best outputs for Organizational growth. Have good analytical and decision making skills with\ncritical thinking capabilities in high pressure environment.\nACADEMIC DETAILS\nCourse\nInstitute / Organization\nBoard /\nUniversity\nYear\n% age/CGPA\nB.Tech (Instrumentation\nand Control Engineering)\nBharati Vidyapeeth\u2019s College of  Engineering,\nNew Delhi\nGGSIPU\n2016-20\n82.9%\nClass XII\nRukmini Devi Public School,  New Delhi\nCBSE\n2015-16\n88.47%\nClass X\nRukmini Devi Public School,  New Delhi\nCBSE\n2013-14\n10.0\nWORK EXPERIENCE\\TRAININGS\nNov 2020 \u2013 Present Instrument and Controls Engineer \u2013 Mcdermott, Gurugram\n\uf0b7\nWorking on an EPC based Project- Polyethylene Plant, Borstar Bay3, Texas.\n\uf0b7\nConsiderable knowledge of Industrial Instruments,Control Systems,Signals,Wiring and\nLoops.\n\uf0b7\nWorked on Instrument Index,P&IDs , Datasheets (technical specification for instruments), Loop\nDiagrams.\n\uf0b7\nWorked on Softwares like Smart plant Instrumentation , AutoCad.\nJune 2019- July 2019     Industrial training \u2013 Indian Oil Corporation limited (Pipelines Division) \u2013 Noida\n\uf0b7\nReviewed P&IDs\n\uf0b7\nIndustrial Instruments functionalities, working and Control System Monitoring.\n\uf0b7\nKnowledge of SCADA and PLC systems\nJune 2018-July 2018 Machine Learning and Artificial Intelligence Training \u2013 Eckovation, New Delhi\n\uf0b7\nImage Classification Using the concept of Convolutional Neural Networks (deep learning)\nJune 2018-Sept 2018     Java Training - Coding Ninjas, New Delhi\nTECHNICAL SKILLS\n\uf0b7 Technical Skills           : Java,SQL,Python,Machine Learning,Industrial Instrumentation,Control Systems\n\uf0b7 Software Knowledge : Smart Plant Instrumentation, AutoCad, Eclipse IDE, MATLAB, MS Excel,Jupyter\nENGINEERING PROJECTS\n\uf0b7\nPneumonia detection from Chest X-ray images using Deep Learning.\n\uf0b7\nRelative localization using the concept of  Swarm Robotics .\n\uf0b7\nSmart Urban Farming \u2013 Automatic Rooftop Using Arduino Uno\nCERTIFICATIONS\n\uf0b7 Certification in Industrial Instrumentation  \u2013 Indian Oil Corporation Limited\n\uf0b7 Certification in JAVA - Coding Ninjas\n\uf0b7 Certification in Machine Learning and Artificial Intelligence - Eckovation\n\uf0b7 Certification for Event Coordinator \u2013 Industrial Society for automation\nPERSONAL INTERESTS\n\uf0b7\nLikes to play football, badminton and chess\n\uf0b7\nEnjoy cooking and like to explore different cafes and food.\n\uf0b7\nBinge watch Thriller movies and web series\n\uf0b7\nLove cycling, travelling and trekking.",
+    "user_level": "Fresher"
+  }
+}

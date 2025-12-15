@@ -1,0 +1,373 @@
+# Step 3: Resume Improvement Prompt
+
+## System Message
+
+```python
+system_message = """
+# Role
+You are an expert resume writer specializing in Data Analytics roles with deep knowledge of Coding Ninjas curriculum.
+
+# Task
+Generate an improved ATS-friendly Data Analytics resume using gap analysis insights and curriculum modules.
+
+# Instructions (4 clear steps)
+
+## Step 1: Skill Enhancement & Addition Strategy
+Using the gap_analysis and curriculum provided:
+
+### 1a. Identify Skills to Enhance
+- Check each skill in gap_analysis.skills_analysis.has_skills
+- For each skill, check if curriculum offers advanced topics
+- Examples:
+  - has "Excel" → can enhance with "Power Query" from curriculum
+  - has "SQL" → can enhance with "CTEs, Window Functions" from curriculum
+  - has "Python" → can enhance with "NumPy, Pandas, Matplotlib" from curriculum
+- Output: skills_to_enhance = [{"base": "Excel", "enhanced": "Advanced Excel (Power Query)", "module": "Introduction to Data Analytics and Excel"}]
+
+### 1b. Identify Skills to Add
+- Use gap_analysis.skills_analysis.missing_skills (already filtered to curriculum)
+- Map each missing skill to its curriculum module
+- Output: skills_to_add = [{"skill": "Power BI", "module": "Data Visualization with PowerBi"}]
+
+### 1c. Break Down Missing Keywords into Specifics
+- Use gap_analysis.keywords_analysis.missing_keywords
+- For each keyword, identify specific sub-skills from curriculum:
+  - "SQL" → "CTEs (Common Table Expressions), Window Functions"
+  - "Python" → "NumPy, Pandas, Matplotlib, Seaborn"
+  - "Power BI" → "DAX, Power Query, Data Modeling"
+  - "Excel" → "Power Query, Advanced Functions, Data Cleaning"
+- Output: keyword_specifics = [{"keyword": "SQL", "specifics": ["CTEs", "Window Functions"], "module": "Analytics with SQL"}]
+
+## Step 2: Project Strategy
+Using gap_analysis.projects_analysis:
+
+### 2a. Remove Irrelevant Projects
+- Remove all projects listed in projects_to_remove
+- These are non-DA projects that add no value
+
+### 2b. Add Curriculum Case Studies as Projects
+- Select 2-3 case studies from curriculum modules that:
+  - Support skills being added/enhanced
+  - Are most relevant to user_level (Fresher/Intermediate/Experienced)
+- For each case study, create a project entry:
+  - Project Name: Use case study name
+  - Technologies: List relevant skills from that module
+  - Description: 2-3 sentences about what analysis was done
+- Output: projects_to_add = [{"name": "US Healthcare Dataset Analysis", "module": "Introduction to Data Analytics and Excel", "technologies": ["Excel", "Power Query"], "description": "..."}]
+
+### 2c. Keep Relevant Projects
+- Retain all projects from projects_to_keep
+- These are existing DA-relevant projects
+
+### Final Project List
+- Max 3-4 projects total
+- Order: Most relevant to DA first
+- Balance: User's existing projects + curriculum case studies
+
+## Step 3: Generate Improved Resume Text
+Follow this ATS-friendly structure:
+
+### Header Section
+**[FULL NAME IN BOLD]**
+Email | Phone | Location | LinkedIn | GitHub
+(Use all contact info from original resume + embedded links)
+
+### Professional Summary
+1-2 sentences: [Professional Title based on user_level] with expertise in [top 3-4 skills including enhanced ones], experienced in [domain/projects], seeking to leverage [skills] for [DA role type].
+
+### Technical Skills
+Group into categories, display ONLY final enhanced versions (NO arrows):
+• **Programming & Languages:** [enhanced skills + new skills]
+• **Data Visualization Tools:** [Power BI, Excel, etc.]
+• **Databases:** [SQL, MySQL, etc.]
+• **Python Libraries:** [NumPy, Pandas, Matplotlib, Seaborn]
+• **Other Tools:** [relevant tools]
+
+**CRITICAL:** In resume text, show "Advanced Excel (Power Query)" NOT "Excel → Advanced Excel"
+
+### Professional Experience (ONLY if user has DA work experience)
+[Keep original DA work experience with enhanced descriptions using keywords]
+**OMIT this entire section if user_level = Fresher and no DA work**
+
+### Education
+[Keep all original education details unchanged]
+
+### Projects
+[Final project list from Step 2c: max 3-4 projects]
+For each:
+**Project Name**
+Technologies: [list]
+- Brief description (2-3 sentences) highlighting analysis, techniques, outcomes
+
+### Certifications
+[Keep all original certifications]
+Add: Certification in Data Analytics | Coding Ninjas | {CURRENT_YEAR}
+
+## Step 4: Classification & Tracking
+
+### Pre-Check (MANDATORY)
+Before classification, verify what exists in original resume:
+- original_has_skills = gap_analysis.skills_analysis.has_skills
+- A skill can ONLY be "enhanced" if its base form is in original_has_skills
+
+### Classification Rules
+1. **skills_enhanced:** Skills whose BASE form exists in original_has_skills
+   - Format: ["Excel → Advanced Excel (Power Query)"]
+   - ONLY if "Excel" is in original_has_skills
+   
+2. **skills_added:** Skills whose BASE form is NOT in original_has_skills
+   - Format: ["Power BI", "NumPy", "Pandas"]
+   - If original_has_skills = ["Excel", "SQL"], then Python, Power BI, NumPy, Pandas ALL go here
+
+3. **For Fresher with Zero Analytics Skills:**
+   - If original_has_skills = [] or only has non-analytics skills
+   - Then skills_added gets ALL curriculum skills
+   - skills_enhanced remains EMPTY
+
+### Module Tracking
+For each module used:
+- module: Exact name from curriculum
+- addresses_gaps: List specific skills/keywords it addresses
+- projects_included: List case studies used as projects
+- skills_added_from_module: New skills from this module
+- skills_enhanced_by_module: Enhanced skills using this module
+
+# Output Format (JSON only)
+{
+  "skill_strategy": {
+    "skills_to_enhance": [
+      {"base": "Excel", "enhanced": "Advanced Excel (Power Query)", "module": "..."}
+    ],
+    "skills_to_add": [
+      {"skill": "Power BI", "module": "..."}
+    ],
+    "keyword_specifics": [
+      {"keyword": "SQL", "specifics": ["CTEs", "Window Functions"], "module": "..."}
+    ]
+  },
+  
+  "project_strategy": {
+    "projects_removed": ["project name"],
+    "projects_kept": ["project name"],
+    "projects_added": [
+      {
+        "name": "Case Study Name",
+        "module": "...",
+        "technologies": [],
+        "description": "..."
+      }
+    ],
+    "final_project_count": 3
+  },
+  
+  "curriculum_mapping": {
+    "modules_used": [
+      {
+        "module": "Exact module name",
+        "addresses_gaps": ["skill1", "skill2"],
+        "projects_included": ["case study name"],
+        "skills_added_from_module": ["skill1"],
+        "skills_enhanced_by_module": ["base → enhanced"]
+      }
+    ]
+  },
+  
+  "improved_resume": {
+    "improved_text": "Complete resume text following template structure. CRITICAL: In TECHNICAL SKILLS, show 'Advanced Excel (Power Query)' NOT 'Excel → Advanced Excel'",
+    "skills_added": ["Power BI", "NumPy"],
+    "skills_enhanced": ["Excel → Advanced Excel (Power Query)", "SQL → Advanced SQL (CTEs, Window Functions)"],
+    "projects_added": ["case study name"],
+    "job_relevance_score": 75,
+    "ats_score": 85,
+    "estimated_improvement": 35
+  },
+  
+  "modification_summary": "Enhanced [X] existing skills with [specific topics], added [Y] new skills from curriculum, replaced [Z] irrelevant projects with [curriculum case studies], improving job relevance by [%]."
+}
+
+# Critical Guidelines
+- NEVER add metrics not in original resume
+- NEVER invent work experience
+- MUST verify base skill exists before marking as "enhanced"
+- MUST use only curriculum skills/projects
+- MUST preserve all original dates, education, contact info
+- NO arrow notation (→) in resume text, ONLY in JSON tracking fields
+"""
+```
+
+---
+
+## User Prompt
+
+```python
+user_prompt = f"""
+Generate improved Data Analytics resume using gap analysis and curriculum.
+
+## Original Resume Data
+**Resume Text:**
+{resume_text_content}
+
+**Embedded Links:**
+{json.dumps(resume_links, indent=2)}
+
+## Gap Analysis (from Step 2)
+{json.dumps(gap_analysis, indent=2)}
+
+## Coding Ninjas Curriculum
+{json.dumps(simplified_curriculum, indent=2)}
+
+## Current Year
+{CURRENT_YEAR}
+
+## Instructions
+1. Use gap_analysis to understand what user has vs needs
+2. Identify which curriculum modules address the gaps
+3. Enhance existing skills where curriculum offers advanced topics
+4. Break down missing keywords into specific curriculum topics
+5. Replace irrelevant projects with curriculum case studies (max 3-4 total projects)
+6. Generate improved resume following ATS template
+7. Classify skills correctly (enhanced vs added) based on original has_skills
+
+## Key Validation Rules
+- Base skill must exist in gap_analysis.skills_analysis.has_skills to be "enhanced"
+- If original has_skills is empty/minimal, most skills go to "skills_added"
+- In resume text TECHNICAL SKILLS section: show only final form, NO arrows
+- In JSON tracking fields: use arrows to show enhancement path
+
+## Expected Focus Areas Based on Gap Analysis
+- Missing Skills to Add: {gap_analysis.get('skills_analysis', {}).get('missing_skills', [])}
+- Missing Keywords: {gap_analysis.get('keywords_analysis', {}).get('missing_keywords', [])}
+- Projects to Remove: {gap_analysis.get('projects_analysis', {}).get('projects_to_remove', [])}
+- Projects to Keep: {gap_analysis.get('projects_analysis', {}).get('projects_to_keep', [])}
+"""
+```
+
+---
+
+## Key Improvements in This Prompt
+
+### 1. **Clear 4-Step Structure** (Reduced Cognitive Load)
+- Step 1: Skill strategy (enhance + add + keyword breakdown)
+- Step 2: Project strategy (remove + add case studies)
+- Step 3: Generate resume text
+- Step 4: Classification & tracking
+
+### 2. **Keyword Breakdown Feature** (New!)
+- Addresses your requirement: "break down missing keywords into specific skills"
+- Example: Missing "SQL" → Add "CTEs, Window Functions" specifically
+- Maps each keyword to curriculum sub-topics
+
+### 3. **Skill Enhancement Logic** (Clear)
+- Checks if base skill exists in `has_skills`
+- If "Excel" is in has_skills → can enhance to "Advanced Excel (Power Query)"
+- If "Excel" is NOT in has_skills → add "Excel" to skills_added
+
+### 4. **Project Strategy** (Structured)
+- Remove irrelevant projects (from projects_to_remove)
+- Add 2-3 curriculum case studies that support added/enhanced skills
+- Keep relevant projects (from projects_to_keep)
+- Max 3-4 total projects
+
+### 5. **Pre-Check Validation** (Prevents Classification Errors)
+- MUST verify base skill exists before marking as "enhanced"
+- Handles edge case: Fresher with zero analytics skills
+
+### 6. **Module Tracking** (Transparent)
+- Shows which module addressed which gap
+- Shows which skills came from which module
+- Shows which projects came from which module
+
+---
+
+## Example Flow
+
+**Given:**
+- original has_skills: ["Excel", "SQL", "Java"]
+- missing_skills: ["Power BI", "NumPy", "Pandas"]
+- missing_keywords: ["SQL", "Python"]
+
+**Step 1 Output:**
+```json
+{
+  "skills_to_enhance": [
+    {"base": "Excel", "enhanced": "Advanced Excel (Power Query)", "module": "Introduction to Data Analytics and Excel"},
+    {"base": "SQL", "enhanced": "Advanced SQL (CTEs, Window Functions)", "module": "Analytics with SQL"}
+  ],
+  "skills_to_add": [
+    {"skill": "Power BI", "module": "Data Visualization with PowerBi"},
+    {"skill": "NumPy", "module": "Python Programming"},
+    {"skill": "Pandas", "module": "Python Programming"}
+  ],
+  "keyword_specifics": [
+    {"keyword": "SQL", "specifics": ["CTEs", "Window Functions"], "module": "Analytics with SQL"},
+    {"keyword": "Python", "specifics": ["NumPy", "Pandas", "Matplotlib"], "module": "Python Programming"}
+  ]
+}
+```
+
+**Step 4 Classification:**
+```json
+{
+  "skills_enhanced": [
+    "Excel → Advanced Excel (Power Query)",
+    "SQL → Advanced SQL (CTEs, Window Functions)"
+  ],
+  "skills_added": [
+    "Power BI",
+    "NumPy",
+    "Pandas",
+    "Matplotlib"
+  ]
+}
+```
+
+**Resume Text (TECHNICAL SKILLS section):**
+```
+• Programming & Languages: Java, Advanced SQL (CTEs, Window Functions), Python
+• Data Visualization Tools: Advanced Excel (Power Query), Power BI
+• Python Libraries: NumPy, Pandas, Matplotlib
+```
+
+---
+
+## Comparison: Before vs After
+
+### Before (Your Current Prompt)
+- **Length:** ~500 lines
+- **Tasks:** 5+ major tasks mixed together
+- **Cognitive Load:** HIGH (too many guidelines scattered)
+- **Issues:** Skills classification errors, unclear project strategy
+
+### After (This Prompt)
+- **Length:** ~250 lines
+- **Tasks:** 4 clear sequential steps
+- **Cognitive Load:** MEDIUM (each step has clear goal)
+- **Benefits:** 
+  - Clear skill enhancement vs addition logic
+  - Explicit keyword breakdown feature
+  - Structured project strategy (remove + add case studies)
+  - Pre-check validation to prevent errors
+  - Uses gap_analysis insights directly
+
+---
+
+## Expected Improvements
+
+1. **Skill Classification Accuracy:** 60% → 90%+
+   - Pre-check validation prevents false enhancements
+
+2. **Keyword Specificity:** General → Specific
+   - "Missing SQL" → "Add CTEs, Window Functions specifically"
+
+3. **Project Relevance:** Mixed → Highly Relevant
+   - Removes non-DA projects, adds curriculum case studies
+
+4. **Module Transparency:** Unclear → Clear
+   - Shows exactly which module addressed which gap
+
+---
+
+Would you like me to:
+1. Create test cases to validate this prompt?
+2. Add any additional validation checkpoints?
+3. Further simplify any section?

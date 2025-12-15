@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: letter;
+            margin: 0.7in;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.6;
+            color: #1a1a1a;
+        }
+        .header {
+            border-bottom: 3px solid #059669;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        .name {
+            font-family: 'Courier New', monospace;
+            font-size: 26pt;
+            font-weight: 700;
+            color: #059669;
+            margin-bottom: 5px;
+            letter-spacing: 2px;
+        }
+        .title {
+            font-size: 11pt;
+            color: #4b5563;
+            font-weight: 400;
+            margin-bottom: 12px;
+        }
+        .contact {
+            font-size: 8.5pt;
+            color: #6b7280;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .section {
+            margin-bottom: 22px;
+        }
+        .section-title {
+            font-family: 'Courier New', monospace;
+            font-size: 12pt;
+            font-weight: 700;
+            color: #059669;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            border-bottom: 1px solid #d1d5db;
+            padding-bottom: 4px;
+        }
+        .summary {
+            text-align: justify;
+            color: #374151;
+            line-height: 1.7;
+            font-size: 10pt;
+        }
+        .experience-item, .project-item, .education-item, .responsibility-item {
+            margin-bottom: 18px;
+            padding-left: 12px;
+            border-left: 2px solid #d1d5db;
+        }
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 6px;
+        }
+        .item-title {
+            font-weight: 700;
+            font-size: 11pt;
+            color: #1a1a1a;
+            font-family: 'Courier New', monospace;
+        }
+        .item-company, .item-institution {
+            font-weight: 500;
+            color: #4b5563;
+            font-size: 9.5pt;
+        }
+        .item-date {
+            font-family: 'Courier New', monospace;
+            font-size: 8.5pt;
+            color: #6b7280;
+            font-weight: 600;
+        }
+        .item-description {
+            color: #374151;
+            margin-top: 4px;
+            font-size: 9.5pt;
+        }
+        .achievements, .duties-list {
+            margin-top: 6px;
+            padding-left: 20px;
+        }
+        .achievements li, .duties-list li {
+            margin-bottom: 4px;
+            color: #374151;
+            font-size: 9.5pt;
+            font-family: 'Courier New', monospace;
+        }
+        .skills-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        .skill-category {
+            background: #f9fafb;
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+        }
+        .skill-category-name {
+            font-family: 'Courier New', monospace;
+            font-weight: 700;
+            font-size: 9pt;
+            color: #059669;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        .skill-items {
+            color: #4b5563;
+            font-size: 9pt;
+        }
+        .skill-items span {
+            display: block;
+            margin-bottom: 2px;
+        }
+        .code-block {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 8.5pt;
+        }
+        .project-links {
+            margin-top: 6px;
+            font-size: 8.5pt;
+            color: #6b7280;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+            line-height: 1.4;
+        }
+        .coding-profile {
+            margin-bottom: 12px;
+            padding: 8px;
+            background: #f9fafb;
+            border-left: 3px solid #059669;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="name">{{ resume.name or 'YOUR_NAME' }}</div>
+        <div class="title">{{ resume.title or 'PROFESSIONAL_TITLE' }}</div>
+        <div class="contact">
+            {% if resume.contact.email %}<span>{{ resume.contact.email }}</span>{% endif %}
+            {% if resume.contact.phone %}<span>{{ resume.contact.phone }}</span>{% endif %}
+            {% if resume.contact.location %}<span>{{ resume.contact.location }}</span>{% endif %}
+            {% if resume.contact.linkedin %}<span>{{ resume.contact.linkedin }}</span>{% endif %}
+            {% if resume.contact.github %}<span>{{ resume.contact.github }}</span>{% endif %}
+        </div>
+    </div>
+
+    {% if resume.summary %}
+    <div class="section">
+        <div class="section-title">SUMMARY</div>
+        <div class="summary">{{ resume.summary }}</div>
+    </div>
+    {% endif %}
+
+    {% if resume.experience %}
+    <div class="section">
+        <div class="section-title">EXPERIENCE</div>
+        {% for exp in resume.experience %}
+        <div class="experience-item">
+            <div class="item-header">
+                <div>
+                    <div class="item-title">{{ exp.position }}</div>
+                    <div class="item-company">{{ exp.company }}</div>
+                </div>
+                <div class="item-date">{{ exp.start_date }} - {{ exp.end_date }}</div>
+            </div>
+            {% if exp.description %}
+            <div class="item-description">{{ exp.description }}</div>
+            {% endif %}
+            {% if exp.achievements %}
+            <ul class="achievements">
+                {% for achievement in exp.achievements %}
+                <li>> {{ achievement }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if resume.projects %}
+    <div class="section">
+        <div class="section-title">PROJECTS</div>
+        {% for project in resume.projects %}
+        <div class="project-item">
+            <div class="item-header">
+                <div>
+                    <div class="item-title">{{ project.name }}</div>
+                    {% if project.technologies %}
+                    <div class="item-description"><span class="code-block">{{ project.technologies|join(' | ') }}</span></div>
+                    {% endif %}
+                </div>
+            </div>
+            {% if project.description %}
+            <div class="item-description">{{ project.description }}</div>
+            {% endif %}
+            {% if project.link or project.code_link or project.live_link %}
+            <div class="project-links">
+                {% if project.code_link %}[code]: {{ project.code_link }}{% endif %}
+                {% if project.live_link %}{% if project.code_link %} | {% endif %}[live]: {{ project.live_link }}{% endif %}
+                {% if project.link and not project.code_link and not project.live_link %}[link]: {{ project.link }}{% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if resume.skills %}
+    <div class="section">
+        <div class="section-title">SKILLS</div>
+        <div class="skills-container">
+            {% for skill in resume.skills %}
+            {% if skill.category %}
+            <div class="skill-category">
+                <div class="skill-category-name">{{ skill.category }}</div>
+                <div class="skill-items">
+                    {% for item in skill['items'] %}
+                    <span>{{ item }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="skill-category">
+                <div class="skill-items">{{ skill }}</div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if resume.education %}
+    <div class="section">
+        <div class="section-title">EDUCATION</div>
+        {% for edu in resume.education %}
+        <div class="education-item">
+            <div class="item-header">
+                <div>
+                    <div class="item-title">{{ edu.degree }}{% if edu.field %} in {{ edu.field }}{% endif %}</div>
+                    <div class="item-institution">{{ edu.institution }}</div>
+                </div>
+                <div class="item-date">{% if edu.start_date %}{{ edu.start_date }} - {% endif %}{{ edu.end_date }}{% if edu.gpa %} | GPA: {{ edu.gpa }}{% endif %}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if resume.achievements %}
+    <div class="section">
+        <div class="section-title">ACHIEVEMENTS</div>
+        <ul class="achievements">
+            {% for achievement in resume.achievements %}
+            <li>> {{ achievement }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if resume.coding_profiles %}
+    <div class="section">
+        <div class="section-title">CODING_PROFILES</div>
+        {% for profile in resume.coding_profiles %}
+        <div class="coding-profile">
+            <div style="font-weight: 700; font-family: 'Courier New', monospace;">{{ profile.platform }}</div>
+            {% if profile.rating %}<div style="font-size: 9pt;">rating: {{ profile.rating }}</div>{% endif %}
+            {% if profile.stars %}<div style="font-size: 9pt;">stars: {{ profile.stars }}</div>{% endif %}
+            {% if profile.problems_solved %}<div style="font-size: 9pt;">problems_solved: {{ profile.problems_solved }}</div>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if resume.responsibilities %}
+    <div class="section">
+        <div class="section-title">LEADERSHIP</div>
+        {% for resp in resume.responsibilities %}
+        <div class="responsibility-item">
+            <div class="item-header">
+                <div>
+                    <div class="item-title">{{ resp.role }}</div>
+                    <div class="item-company">{{ resp.organization }}</div>
+                </div>
+                {% if resp.duration %}
+                <div class="item-date">{{ resp.duration }}</div>
+                {% endif %}
+            </div>
+            {% if resp.duties %}
+            <ul class="duties-list">
+                {% for duty in resp.duties %}
+                <li>> {{ duty }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if resume.courses %}
+    <div class="section">
+        <div class="section-title">COURSES</div>
+        <ul class="achievements">
+            {% for course in resume.courses %}
+            <li>> {{ course }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if resume.certifications %}
+    <div class="section">
+        <div class="section-title">CERTIFICATIONS</div>
+        {% for cert in resume.certifications %}
+        <div class="responsibility-item">
+            <div class="item-title">{{ cert.name }}</div>
+            {% if cert.issuer %}<div class="item-description">{{ cert.issuer }}</div>{% endif %}
+            {% if cert.date %}<div class="item-date">{{ cert.date }}</div>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if resume.awards %}
+    <div class="section">
+        <div class="section-title">AWARDS</div>
+        <ul class="achievements">
+            {% for award in resume.awards %}
+            <li>> {{ award }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</body>
+</html>

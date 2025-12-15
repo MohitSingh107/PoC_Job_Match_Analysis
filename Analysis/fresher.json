@@ -1,0 +1,63 @@
+{
+  "total_jobs_analyzed": 89,
+  "most_demanded_skills": {
+    "Excel": "91.01%",
+    "SQL": "76.40%",
+    "Power BI": "32.58%",
+    "Python": "29.21%",
+    "NumPy": "3.37%",
+    "Pandas": "3.37%",
+    "Matplotlib": "3.37%",
+    "Seaborn": "3.37%",
+    "Machine Learning": "1.12%"
+  },
+  "soft_skills": {
+    "Communication Skills": "73.03%",
+    "Analytical Skills": "69.66%",
+    "Problem Solving": "58.43%",
+    "Attention to Detail": "49.44%",
+    "Collaboration/Teamwork": "41.57%",
+    "Critical Thinking": "20.22%",
+    "Organizational Skills": "14.61%",
+    "Presentation Skills": "13.48%",
+    "Ownership/Self-driven": "12.36%",
+    "Adaptability/Flexibility": "8.99%",
+    "Time Management": "6.74%",
+    "Documentation Skills": "5.62%",
+    "Leadership": "3.37%",
+    "Multitasking": "3.37%"
+  },
+  "roles": {
+    "Data Analyst": "42.70%",
+    "Business Analyst": "19.10%",
+    "MIS Executive": "13.48%",
+    "Data Scientist": "6.74%",
+    "Data Engineer": "3.37%",
+    "Research Analyst": "3.37%",
+    "SQL Developer": "2.25%",
+    "Power BI Developer": "1.12%",
+    "Python Data Engineer": "1.12%",
+    "Operations Associate": "1.12%",
+    "Data Management Specialist": "1.12%",
+    "Data Reporting Analyst": "1.12%",
+    "Marketing Data Analyst": "1.12%",
+    "IT Analyst": "1.12%",
+    "Data Associate": "1.12%"
+  },
+  "educational_background": {
+    "Any Graduate/Bachelor's Degree": "65.17%",
+    "B.Tech/B.E.": "46.07%",
+    "Computer Science/IT": "37.08%",
+    "BCA/MCA": "15.73%",
+    "MBA": "8.99%",
+    "B.Sc": "7.87%",
+    "M.Tech/M.Sc": "6.74%",
+    "Commerce/B.Com": "5.62%",
+    "Statistics/Mathematics": "5.62%",
+    "Data Science": "4.49%",
+    "Business Administration/BBA": "3.37%",
+    "Economics": "3.37%",
+    "Engineering (Any)": "2.25%",
+    "IIT/NIT": "1.12%"
+  }
+}

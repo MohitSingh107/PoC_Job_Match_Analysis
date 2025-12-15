@@ -1,0 +1,82 @@
+{
+  "job_relevance_score": {
+    "range": [0, 100],
+    "factors": {
+      "skills_match": {
+        "weight": 0.30,
+        "rules": {
+          "high": "Multiple core skills with demonstrated depth",
+          "medium": "Some core skills with basic proficiency",
+          "low": "Few/no relevant skills or keyword stuffing"
+        },
+        "deduct": "5-10 if irrelevant skills dominate"
+      },
+      "experience": {
+        "weight": {"fresher": 0, "intermediate": 0.20, "experienced": 0.20},
+        "fresher_redistribution": {"projects": 0.15, "skills": 0.05},
+        "rules": {
+          "high": "Direct analytics work with quantified results",
+          "medium": "Related experience with some metrics",
+          "low": "Unrelated or no quantification"
+        }
+      },
+      "domain_knowledge": {
+        "weight": 0.20,
+        "experienced": "Industry analytics experience, business metrics understanding",
+        "fresher": "Domain understanding via coursework, case studies, projects, internships"
+      },
+      "education": {
+        "weight": {"fresher": 0.15, "intermediate": 0.15, "experienced_3yr_plus": 0.10},
+        "relevant_fields": ["Statistics", "Math", "CS", "Data Science", "Engineering", "Economics"],
+        "fresher_bonus": "GPA 3.5+, honors, relevant coursework",
+        "experienced_bonus": "Advanced degrees add value"
+      },
+      "projects_certs": {
+        "weight": 0.15,
+        "requirements": ["End-to-end projects", "Clear outcomes", "Relevant certifications"],
+        "fresher": "Critical - compensates for no professional experience",
+        "experienced": "Should show complexity and business impact"
+      }
+    },
+    "deductions": {
+      "no_quantification": [5, 10],
+      "unfocused_content": [5, 10]
+    }
+  },
+  "ats_score": {
+    "range": [0, 100],
+    "factors": {
+      "format": {
+        "weight": 0.30,
+        "required": ["Single column", "No tables/graphics/images", "Standard fonts 10-12pt", "PDF or .docx", "No critical info in headers/footers"],
+        "major_penalty": "Complex layouts: -20 to -30"
+      },
+      "structure": {
+        "weight": 0.25,
+        "required_sections": ["Experience", "Education", "Skills", "Projects", "Certifications"],
+        "format": ["Reverse chronological", "Consistent dates (MM/YYYY)", "Clear: Title, Org, Location, Dates"]
+      },
+      "keywords": {
+        "weight": 0.25,
+        "required": ["Natural keyword inclusion in context", "Action verbs", "Acronyms spelled out first use", "No stuffing"],
+        "penalty": "Keyword stuffing: -10 to -15"
+      },
+      "contact": {
+        "weight": 0.20,
+        "required": ["Name", "Phone", "Email", "LinkedIn", "Location"],
+        "length": "1 page (fresher), 1-2 pages (experienced)",
+        "penalty": "Missing contact: -15"
+      }
+    },
+    "major_deductions": {
+      "tables": [15, 20],
+      "graphics": [20, 25],
+      "multi_column": [10, 15],
+      "missing_sections": [10, 15]
+    }
+  },
+  "instructions": {
+    "steps": ["1. Detect level (fresher/intermediate/experienced)", "2. Adjust weights by level", "3. Calculate weighted sub-scores", "4. Apply deductions", "5. Ensure final score >= 0"],
+    "output": {"job_relevance_score": "0-100", "ats_score": "0-100", "breakdown": "sub-scores + deductions"}
+  }
+}

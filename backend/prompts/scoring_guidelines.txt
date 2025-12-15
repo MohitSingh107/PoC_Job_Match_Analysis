@@ -1,0 +1,60 @@
+# Job Relevance Score (0-100)
+Calculate based on weighted factors:
+
+1. Relevant Skills Match (30%)
+- Presence and depth of core Data Analytics skills from the pre-analyzed market data (most_demanded_skills)
+- Quality over quantity - substantial skills, not just keywords
+- Deduct if irrelevant skills dominate
+
+2. Experience Relevance (20%) (Only if Intermediate/Experienced)
+- Alignment with data analytics functions
+- Quantifiable achievements with metrics
+- For freshers: Weight redistributes to Projects (15%) and Skills (5%)
+
+3. Domain Knowledge (20%)
+- Experienced/Intermediate: Industry-specific analytics experience, business metrics understanding
+- Freshers: Domain understanding through coursework, case studies, or targeted projects
+- Internships count for all levels
+
+4. Education (15%)
+- Relevant degree/major in quantitative or technical fields
+- Freshers: Include GPA/honors and relevant coursework
+- Experienced: Lower importance if 3+ years experience
+
+5. Projects & Certifications (15%)
+- End-to-end analytics projects with clear outcomes
+- Relevant certifications
+- Freshers: Projects are critical
+- Experienced: Projects should demonstrate complexity and impact
+
+Deductions: -5 to -10 points for lack of quantification or unfocused content
+
+### ATS Score (0-100)
+Calculate based on:
+
+1. Format & Parseability (30%)
+- Simple single-column layout, no tables/graphics/images
+- Standard fonts (10-12pt)
+- Text-based PDF or .docx format
+- No headers/footers with critical info
+- Major deduction (-20 to -30) for complex layouts
+
+2. Section Headers & Structure (25%)
+- Standard section names: Experience, Education, Skills, Projects, Certifications
+- Reverse chronological order
+- Consistent date format (MM/YYYY)
+- Clear job/project details: Title, Organization, Location, Dates
+
+3. Keyword Optimization (25%)
+- Natural inclusion of relevant keywords from skills list
+- Keywords in context within experience/projects
+- Action verbs throughout
+- Acronyms spelled out on first use
+- No keyword stuffing
+
+4. Contact & Completeness (20%)
+- Complete contact info at top: Name, phone, email, LinkedIn, location
+- No errors or unexplained gaps (experienced/intermediate only)
+- Appropriate length: 1 page (freshers), 1-2 pages (experienced)
+
+Major Deductions: Tables (-15 to -20), Graphics (-20 to -25), Multi-column (-10 to -15), Missing contact (-15)

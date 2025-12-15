@@ -1,0 +1,133 @@
+{
+  "curriculum": [
+    {
+      "module": "Introduction to Data Analytics and Excel",
+      "skills": [
+        "Data Analytics Fundamentals",
+        "Data Cleaning",
+        "Excel Operations & Formatting",
+        "Data Extraction",
+        "Excel LOOKUPs",
+        "AI Tools in Excel",
+        "Handling Missing Values & Outliers",
+        "Data Charting",
+        "Univariate & Bivariate Analysis",
+        "Power Query",
+        "Data Transformation"
+      ],
+      "caseStudies": [
+        "National Air Quality",
+        "US Healthcare Dataset",
+        "India CPI Inflation"
+      ]
+    },
+    {
+      "module": "Data Visualization with PowerBi",
+      "skills": [
+        "Business Intelligence Concepts",
+        "Power BI Fundamentals",
+        "Data Cleaning in Power BI",
+        "AI Tools in Power BI",
+        "Data Modelling",
+        "DAX Functions",
+        "Advanced DAX",
+        "Power BI Visualization",
+        "Report Creation",
+        "Data Storytelling",
+        "Power BI Service & AI Insights",
+        "Row Level Security (RLS) & KPIs"
+      ],
+      "caseStudies": [
+        "E-com Orders"
+      ]
+    },
+    {
+      "module": "Analytics with SQL",
+      "skills": [
+        "Database Fundamentals",
+        "MySQL Workbench",
+        "Advanced SQL Querying",
+        "CRUD Operations",
+        "Schema Management",
+        "SQL String Operations",
+        "Aggregate Functions",
+        "Joins & ER Modelling",
+        "Complex Query Writing",
+        "Case Statements",
+        "CTEs & Subqueries",
+        "SQL Date Manipulation",
+        "Window Functions",
+        "Views & Indexing",
+        "Stored Procedures & Triggers",
+        "TCL & DCL Commands"
+      ],
+      "caseStudies": [
+        "Retail Store",
+        "E-Com Business"
+      ]
+    },
+    {
+      "module": "Python Programming",
+      "skills": [
+        "Python Basics",
+        "Python Syntax & Variables",
+        "Python Operators",
+        "String Manipulation",
+        "Python Data Structures (Lists, Tuples, Sets, Dictionaries)",
+        "Conditional Statements",
+        "Loops",
+        "Control Flow",
+        "Python Functions",
+        "Exception Handling",
+        "Python Modules",
+        "File Handling",
+        "NumPy",
+        "Statistical Analysis with NumPy",
+        "Pandas Series",
+        "Pandas Data Manipulation",
+        "Matplotlib & Seaborn",
+        "Object Oriented Programming (OOP)",
+        "Database Connectivity"
+      ],
+      "caseStudies": [
+        "Covid-19",
+        "PhonePe Digital Payments"
+      ]
+    },
+    {
+      "module": "Statistics & EDA with Python",
+      "skills": [
+        "Statistical Fundamentals",
+        "Data Collection Techniques",
+        "Sampling & Measures of Central Tendency",
+        "Measures of Dispersion",
+        "Probability",
+        "Probability Distributions",
+        "Central Limit Theorem",
+        "Distribution Properties",
+        "Hypothesis Testing",
+        "Confidence Intervals",
+        "Statistical Tests"
+      ],
+      "caseStudies": [
+        "Loan Default",
+        "Pro Kabaddi League",
+        "Superstore Sales"
+      ]
+    },
+    {
+      "module": "Generative AI (Live lectures)",
+      "skills": [
+        "Generative AI Concepts",
+        "Prompt Engineering",
+        "Generative AI in Excel",
+        "AI-Assisted Python Development",
+        "AI-Assisted SQL Coding",
+        "AI for Data Analysis & Visualization"
+      ],
+      "caseStudies": [
+        "Credit Risk Modelling"
+      ]
+    }
+  ]
+}

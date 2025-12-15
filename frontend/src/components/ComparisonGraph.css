@@ -1,0 +1,119 @@
+.graph-cta-section {
+  background: #fef4f1;
+  border-radius: 18px;
+  padding: 2.5rem;
+  margin-bottom: 2rem;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 2rem;
+  align-items: center;
+}
+
+.graph-card {
+  background: #fff;
+  border-radius: 18px;
+  padding: 1.75rem;
+  box-shadow: 0 14px 38px rgba(17, 24, 39, 0.08);
+  border: 1px solid #f2e5de;
+}
+
+.graph-header h3 {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 0.4rem;
+}
+
+.graph-header p {
+  margin: 0 0 1rem;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.graph-wrapper {
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.cta-card {
+  background: #fef4f1;
+  border-radius: 18px;
+  padding: 2.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cta-card h2 {
+  font-size: 2.1rem;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.cta-card h2 span {
+  color: #111827;
+}
+
+.cta-card p {
+  margin: 0;
+  color: #4b5563;
+  font-size: 1.05rem;
+  max-width: 420px;
+}
+
+.cta-button {
+  background: #ff6b35;
+  color: #fff;
+  border: none;
+  padding: 0.9rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(255, 107, 53, 0.24);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  align-self: flex-start;
+}
+
+.cta-button:hover {
+  background: #e55f2e;
+  transform: translateY(-1px);
+  box-shadow: 0 16px 32px rgba(255, 107, 53, 0.3);
+}
+
+.cta-button:active {
+  transform: translateY(0);
+  box-shadow: 0 10px 22px rgba(255, 107, 53, 0.26);
+}
+
+.graph-footer {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding-top: 2rem;
+  margin-top: 2rem;
+  border-top: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.graph-footer p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 1100px) {
+  .graph-cta-section {
+    grid-template-columns: 1fr;
+  }
+
+  .graph-card {
+    order: 1;
+  }
+
+  .cta-card {
+    order: 2;
+  }
+}
+

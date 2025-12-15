@@ -1,0 +1,74 @@
+{
+  "full_analysis": {
+    "analysis_summary": "The resume demonstrates foundational data analytics skills and relevant projects but lacks key tools like Power BI and Pandas; ATS compatibility is decent but could improve with consistent formatting.",
+    "ats_analysis": {
+      "reasoning": "The resume uses a simple single-column layout with standard fonts and clear section headers, but inconsistent date formats and some formatting issues reduce ATS parsing efficiency."
+    },
+    "experience_reasoning": "The candidate has no explicit work experience in Data Analytics roles. The only relevant experience is an ongoing Instrument and Controls Engineer role since Nov 2020, which is not directly Data Analytics. Trainings and projects related to Machine Learning and Python are present but no explicit DA job experience. Hence, experience duration in DA is effectively 0 years, classifying as Fresher.",
+    "job_market_analysis": {
+      "jobs_analyzed": 89,
+      "top_skills": [
+        "Excel (appears in 91.01%) - Demand: Critical",
+        "SQL (appears in 76.40%) - Demand: Critical",
+        "Power BI (appears in 32.58%) - Demand: Essential",
+        "Python (appears in 29.21%) - Demand: Essential",
+        "NumPy (appears in 3.37%) - Demand: Growing",
+        "Pandas (appears in 3.37%) - Demand: Growing",
+        "Matplotlib (appears in 3.37%) - Demand: Growing",
+        "Seaborn (appears in 3.37%) - Demand: Growing",
+        "Machine Learning (appears in 1.12%) - Demand: Growing"
+      ]
+    },
+    "keywords_analysis": {
+      "missing_keywords": [
+        "Power BI",
+        "NumPy",
+        "Pandas",
+        "Matplotlib",
+        "Seaborn"
+      ],
+      "present_keywords": [
+        "Java",
+        "SQL",
+        "Python",
+        "Machine Learning",
+        "Excel",
+        "MATLAB",
+        "Jupyter"
+      ]
+    },
+    "projects_analysis": {
+      "projects_to_keep": [
+        "Pneumonia detection from Chest X-ray images using Deep Learning"
+      ],
+      "projects_to_remove": [
+        "Relative localization using the concept of Swarm Robotics",
+        "Smart Urban Farming \u2013 Automatic Rooftop Using Arduino Uno"
+      ]
+    },
+    "scores": {
+      "ats_score": 75,
+      "job_relevance_score": 65,
+      "score_reasoning": "Strong presence of core skills and relevant projects boosts job relevance, but missing key analytics tools and limited direct experience lower the score; ATS score is good due to simple format but affected by inconsistent date formatting and minor structural issues."
+    },
+    "skills_analysis": {
+      "has_skills": [
+        "Java",
+        "SQL",
+        "Python",
+        "Machine Learning",
+        "Excel",
+        "MATLAB",
+        "Jupyter"
+      ],
+      "missing_skills": [
+        "Power BI",
+        "NumPy",
+        "Pandas",
+        "Matplotlib",
+        "Seaborn"
+      ]
+    },
+    "user_level": "Fresher"
+  }
+}
