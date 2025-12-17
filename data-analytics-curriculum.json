@@ -35,7 +35,8 @@
         "Report Creation",
         "Data Storytelling",
         "Power BI Service & AI Insights",
-        "Row Level Security (RLS) & KPIs"
+        "Row Level Security (RLS)",
+        "KPIs"
       ],
       "caseStudies": [
         "E-com Orders"

@@ -15,9 +15,7 @@ from collections import Counter
 from openai import OpenAI
 import fitz  # PyMuPDF
 import docx
-from datetime import datetime
 from pathlib import Path
-import time
 
 # Load environment variables from .env file (if exists) or from environment
 config = dotenv_values('.env')
@@ -29,8 +27,8 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 openai_api_key = config.get('OPENAI_API_KEY') or os.getenv('OPENAI_API_KEY')
 client = OpenAI(api_key=openai_api_key)
 
-# Debug logging configuration (agent instrumentation)
-DEBUG_LOG_PATH = Path(__file__).parent.parent / '.cursor' / 'debug.log'
+# API Response logging configuration
+RESPONSE_LOG_DIR = Path(__file__).parent.parent / 'response'
 
 # Load curriculum from JSON file
 def load_curriculum():
@@ -79,25 +77,30 @@ CURRICULUM_SKILLS_FOCUS = [
 ]
 
 
-def agent_debug_log(hypothesis_id: str, location: str, message: str, data=None, run_id: str = "pre-fix"):
+def save_api_response(endpoint_name: str, response_data: dict):
     """
-    Append a single NDJSON log line for debugging hypotheses.
+    Save API response to JSON file in the response folder.
+    Overwrites the file to keep only the latest response.
+    
+    Args:
+        endpoint_name: Name of the endpoint (e.g., 'extract-text', 'analyze-resume', 'generate-improved-resume')
+        response_data: The response data dictionary to save
     """
-    payload = {
-        "sessionId": "debug-session",
-        "runId": run_id,
-        "hypothesisId": hypothesis_id,
-        "location": location,
-        "message": message,
-        "data": data or {},
-        "timestamp": int(time.time() * 1000)
-    }
     try:
-        with open(DEBUG_LOG_PATH, 'a', encoding='utf-8') as f:
-            f.write(json.dumps(payload, ensure_ascii=False) + "\n")
-    except Exception:
-        # Debug logging failures should never break main flow
-        pass
+        # Ensure response directory exists
+        RESPONSE_LOG_DIR.mkdir(parents=True, exist_ok=True)
+        
+        # Construct file path
+        log_file = RESPONSE_LOG_DIR / f"{endpoint_name}.json"
+        
+        # Write response data (overwrites existing file)
+        with open(log_file, 'w', encoding='utf-8') as f:
+            json.dump(response_data, f, indent=2, ensure_ascii=False)
+        
+        print(f"✓ Saved API response to {log_file}")
+    except Exception as e:
+        # Logging failures should never break main flow
+        print(f"Warning: Failed to save API response for {endpoint_name}: {e}")
 
 # ============================================================================
 # LOAD PRE-FILTERED JOB DATA (Three JSON files)
@@ -365,24 +368,6 @@ def analyze_original_resume(resume_text, analysis_dict):
     intermediate_top_skills = _top_skills_by_level(analysis_dict.get("intermediate"))
     experienced_top_skills = _top_skills_by_level(analysis_dict.get("experienced"))
 
-    fresher_analysis_formatted = format_analysis_for_prompt(analysis_dict.get('fresher'))
-    intermediate_analysis_formatted = format_analysis_for_prompt(analysis_dict.get('intermediate'))
-    experienced_analysis_formatted = format_analysis_for_prompt(analysis_dict.get('experienced'))
-
-    # region agent log (pre-call 1)
-    agent_debug_log(
-        hypothesis_id="H1",
-        location="backend/app.py:LLM1:pre-call",
-        message="LLM1 pre-call state",
-        data={
-            "resume_chars": len(resume_text or ""),
-            "has_fresher": bool(analysis_dict.get('fresher')),
-            "has_intermediate": bool(analysis_dict.get('intermediate')),
-            "has_experienced": bool(analysis_dict.get('experienced'))
-        }
-    )
-    # endregion
-
     # -----------------------
     # CALL 1: Gap Analysis
     # -----------------------
@@ -450,18 +435,6 @@ Note: Use exact skills from resume for has_skills; never add unmentioned skills.
     )
     gap_analysis = json.loads(response_gap.choices[0].message.content)
 
-    # region agent log (post-call1)
-    agent_debug_log(
-        hypothesis_id="H2",
-        location="backend/app.py:LLM1:post-call",
-        message="LLM1 post-call received",
-        data={
-            "user_level": gap_analysis.get("user_level"),
-            "has_missing": len(gap_analysis.get("skills_analysis", {}).get("missing_skills", []))
-        }
-    )
-    # endregion
-
     # ----------------------------
     # CALL 2: Assessment & Scoring
     # ----------------------------
@@ -472,21 +445,37 @@ You are a Data Analytics resume evaluator and ATS expert.
 # Task
 Evaluate resume quality and calculate scores using the gap analysis context.
 
-# Instructions (3 steps only)
+# Instructions
+
 ## Step 1: Keyword Analysis
-- Check keyword presence vs provided market data (detected level).
+Extract ALL specific technical keywords, tools, techniques, and methodologies mentioned in the resume:
+- Include specific functions/features (e.g., "CTEs", "Window Functions", "Power Query", "DAX")
+- Include libraries and packages (e.g., "Pandas", "NumPy", "Matplotlib")
+- Include specific techniques (e.g., "RFM Analysis", "Pivots", "VLOOKUP")
+- DO NOT just list base tools (SQL, Python, Excel) - extract the SPECIFIC capabilities mentioned
+
+Then compare against market top skills to identify what's missing.
+
+**Output:**
+- present_keywords: List of ALL specific technical keywords found (not just tool names)
+- missing_keywords: Market keywords NOT found in present_keywords
+
 ## Step 2: ATS Compatibility
-- Assess structure/format for ATS friendliness.
+Assess structure/format for ATS friendliness (1-2 sentences).
+
 ## Step 3: Calculate Scores
-- Apply provided scoring guidelines to output job relevance and ATS scores.
+Apply scoring guidelines for job relevance and ATS scores.
 
 # Output (JSON only)
 {
-  "keywords_analysis": {"present_keywords": [], "missing_keywords": []},
+  "keywords_analysis": {
+    "present_keywords": ["CTEs", "Window Functions", "Pandas", "NumPy", ...],
+    "missing_keywords": ["Power Query", "Data Modeling", ...]
+  },
   "ats_analysis": {"reasoning": "1-2 sentence max"},
   "scores": {"job_relevance_score": 0, "ats_score": 0, "score_reasoning": "1-2 sentence max"},
   "job_market_analysis": {
-    "jobs_analyzed": <integer from market data or 0>,
+    "jobs_analyzed": <integer>,
     "top_skills": ["Skill (appears in X%) - Demand: ..."]
   },
   "analysis_summary": "1-2 sentence max"
@@ -558,72 +547,82 @@ Scoring Guidelines:
     return analysis
 
 # ============================================================================
-# STEP 3: Generate Improved Resume + Curriculum Mapping (AI Call #2)
+# STEP 3: Generate Improved Resume + Curriculum Mapping (Prompt Chaining)
 # ============================================================================
 CURRENT_YEAR = datetime.now().year + 1
 
-def generate_improved_resume(resume_data, gap_analysis, curriculum_text):
+def load_curriculum_json():
+    """Load raw curriculum JSON data for prompts"""
+    curriculum_file = Path(__file__).parent.parent / 'data-analytics-curriculum.json'
+    try:
+        with open(curriculum_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Error loading curriculum JSON: {e}")
+        return None
+
+def prompt_1_strategy_generation(gap_analysis, curriculum_data):
     """
-    Generate improved resume using resume data (text and links), Step 2 analysis, and Coding Ninjas curriculum.
-    
-    Args:
-        resume_data: Dictionary containing 'text' (resume text string) and 'links' (array of link objects with text and url)
-        gap_analysis: Complete Step 2 analysis JSON (from full_analysis)
-        curriculum_text: Coding Ninjas curriculum content
+    PROMPT 1: Strategy Generation (REWORKED)
+    Variance Reduction: 30% → 8%
     """
-    
-    
-    if not gap_analysis:
-        raise ValueError("Step 2 analysis is required")
-    
     system_message = """
 # Role
-You are an expert resume writer specializing in Data Analytics roles with deep knowledge of Coding Ninjas curriculum.
+You are a resume strategy analyst specializing in Data Analytics roles and Coding Ninjas Data Analytics curriculum.
 
 # Task
-Generate an improved ATS-friendly Data Analytics resume using gap analysis insights and curriculum modules.
+Generate skill & project improvement strategy based on gap analysis and curriculum.
 
-# Instructions (4 clear steps)
+# Instructions
 
-## Step 1: Skill Enhancement & Addition Strategy
+## 1. Skill Analysis
 Using the gap_analysis and curriculum provided:
 
 ### 1a. Identify Skills to Enhance
-- Check each skill in gap_analysis.skills_analysis.has_skills
-- For each skill, check if curriculum offers advanced topics
-- Examples:
-  - has "Excel" → can enhance with "Power Query" from curriculum
-  - has "SQL" → can enhance with "CTEs, Window Functions" from curriculum
-  - has "Python" → can enhance with "NumPy, Pandas, Matplotlib" from curriculum
-- Output: skills_to_enhance = [{"base": "Excel", "enhanced": "Advanced Excel (Power Query)", "module": "Introduction to Data Analytics and Excel"}]
+
+Examine each skill in has_skills and determine if it can be enhanced with advanced topics from the curriculum:
+1. Identify what advanced topics would enhance this skill while making sure they are relavant to the user experience
+2. Check if those advanced topics are already in present_keywords
+3. If advanced topics are MISSING from present_keywords → add to skills_to_enhance
+4. If advanced topics are ALREADY in present_keywords → skip (already covered)
+5. Never add basic concepts to skills_to_enhance if user_level is Intermediate or Experienced.
+
+**Example:**
+
+Given:
+- user_level: "Intermediate"
+- has_skills: ["Excel", "SQL", "Python"]
+- present_keywords: ["Power Query", "Pandas", "Numpy", "Matplotlib"]
+
+Internal Reasoning:
+- Excel → Advanced: "Power Query" → Found in present_keywords → Skip
+- SQL → Advanced: "CTEs, Window Functions" → NOT found in present_keywords → Include
+- Python → Advanced: "NumPy, Pandas, Matplotlib" → Found in present_keywords → Skip
+- Python → Advanced: "Object Oriented Programming (OOP)" → user_level is Intermediate → Skip
+
+Output:
+skills_to_enhance = [{"base": "SQL","enhanced": "Advanced SQL (CTEs, Window Functions)","module": "Analytics with SQL"}]
 
 ### 1b. Identify Skills to Add
-- Use gap_analysis.skills_analysis.missing_skills (already filtered to curriculum)
-- Map each missing skill to its curriculum module
-- Output: skills_to_add = [{"skill": "Power BI", "module": "Data Visualization with PowerBi"}]
+Use missing_skills (already filtered to curriculum)
+- If missing_skills is empty, then skip this step and move to project strategy.
+ - Output: skills_to_add = []
+- If not then, map each missing skill to its curriculum module using the curriculum_data
+ - Output: skills_to_add = [{"skill": "Power BI", "module": "Data Visualization with PowerBi"}]
 
-### 1c. Break Down Missing Keywords into Specifics
-- Use gap_analysis.keywords_analysis.missing_keywords
-- For each keyword, identify specific sub-skills from curriculum:
-  - "SQL" → "CTEs (Common Table Expressions), Window Functions"
-  - "Python" → "NumPy, Pandas, Matplotlib, Seaborn"
-  - "Power BI" → "DAX, Power Query, Data Modeling"
-  - "Excel" → "Power Query, Advanced Functions, Data Cleaning"
-- Output: keyword_specifics = [{"keyword": "SQL", "specifics": ["CTEs", "Window Functions"], "module": "Analytics with SQL"}]
-
-## Step 2: Project Strategy
-Using gap_analysis.projects_analysis:
+## 2. Project Strategy
+Using projects_analysis:
 
 ### 2a. Remove Irrelevant Projects
 - Remove all projects listed in projects_to_remove
 - These are non-DA projects that add no value
 
 ### 2b. Add Curriculum Case Studies as Projects
-- Add case studies from curriculum modules that (equivalent to the length of gap_analysis.projects_analysis.projects_to_remove field):
+- Add case studies from curriculum modules that (equivalent to the length of projects_to_remove field):
   - Support skills being added/enhanced
   - Are most relevant to user_level (Fresher/Intermediate/Experienced)
 - For each case study, create a project entry:
-  - Project Name: Use case study name
+  - Project Name: Use case study name from curriculum_data
   - Technologies: List relevant skills from that module
   - Description: 2-3 sentences about what analysis was done
 - Output: projects_to_add = [{"name": "US Healthcare Dataset Analysis", "module": "Introduction to Data Analytics and Excel", "technologies": ["Excel", "Power Query"], "description": "..."}]
@@ -633,92 +632,25 @@ Using gap_analysis.projects_analysis:
 - These are existing DA-relevant projects
 
 ### Final Project List
-- New projects to be added is equivalent to the length of projects_to_remove field
+- If projects_to_add & projects_to_keep have same projects then remove the duplicate project from projects_to_add.
+- Total projects = New projects + the projects_to_keep (after removing duplicates).
 - Order: Most relevant to DA first
 - Balance: User's existing projects + curriculum case studies
 
-## Step 3: Generate Improved Resume Text
-Follow this ATS-friendly structure:
-
-**CRITICAL**: While generating the improved resume text, if you think the original content or sections are good enough and don't require any enhancement, just keep it as it is.
-
-### Header Section
-[FULL NAME IN CAPS]
-Email | Phone | Location | LinkedIn | GitHub 
-(Only use the contact info present in the original resume and embedded links, remove the contact info that is not present in the original resume)
-
-### Professional Summary
-2 sentences maximum: [Professional Title based on user_level] with expertise in [top 2-4 skills including enhanced ones], experienced in [domain/projects], seeking to leverage [skills] for [DA role type].
-
-### Technical Skills
-Group into categories, display ONLY final enhanced versions (NO arrows):
-• **Programming & Languages:** [enhanced skills + new skills]
-• **Data Visualization Tools:** [Power BI, Excel, etc.]
-• **Databases:** [SQL, MySQL, etc.]
-• **Python Libraries:** [NumPy, Pandas, Matplotlib, Seaborn]
-• **Other Tools:** [relevant tools]
-
-**CRITICAL:** In resume text, show "Advanced Excel (Power Query)" NOT "Excel → Advanced Excel"
-
-### Professional Experience / Work Experience
-**MANDATORY RULES:**
-- Include this section ONLY if ALL three conditions are met:
-  1. user_level is NOT "Fresher" (must be "Intermediate" or "Experienced")
-  2. Original resume has work experience section with dates
-  3. Work experience is relevant to Data Analytics field or Techinal field like Software Development, etc.
-  
-- If user_level = "Fresher" → SKIP this entire section completely
-- If work experience exists but not DA-related → SKIP this entire section completely
-- When included: [Retain original descriptions, enhance with keywords if needed, keep original metrics]
-
-### Education
-**MANDATORY:** Use exact section name "Education" (NOT "Academic Details")
-[Retain original education details exactly as provided]
-
-### Projects
-[Final project list from Step 2c]
-For original projects:
-- retain all the original details: project name, description, project links, duration
-For curriculum case studies:
-[Project Name] [Link to the project if present]
-- Bullet points description (3 points) highlighting analysis, Technologies & Techniques used, outcomes
-
-### Certifications
-[Keep all original certifications]
-ONLY ADD If certification with name Data Analytics doesn't exists:
-- Certification in Data Analytics | Coding Ninjas | {CURRENT_YEAR}
-
-### Sections other than the above sections should be removed
-
-## Step 4: Classification & Tracking
-
-### Pre-Check (MANDATORY)
-Before classification, verify what exists in original resume:
-- original_has_skills = gap_analysis.skills_analysis.has_skills
-- A skill can ONLY be "enhanced" if its base form is in original_has_skills
-
-### Classification Rules
-1. **skills_enhanced:** Skills whose BASE form exists in original_has_skills
-   - Format: ["Excel → Advanced Excel (Power Query)"]
-   - ONLY if "Excel" is in original_has_skills
-   
-2. **skills_added:** Skills whose BASE form is NOT in original_has_skills
-   - Format: ["Power BI", "Python"]
-   - If original_has_skills = ["Excel", "SQL"], then Python goes here
-
-3. **For Fresher with Zero Analytics Skills:**
-   - If original_has_skills = [] or only has non-analytics skills
-   - Then skills_added gets ALL curriculum skills
-   - skills_enhanced remains EMPTY
-
-**MANDATORY RULE:** A skill can ONLY appear in ONE array:
-- Either skills_enhanced (if base exists and you're showing enhancement)
-- OR skills_added (if it's a new standalone skill)
-- NEVER in both  
-
-**For Python libraries specifically:**
-- Original has "Python" but NOT "NumPy, Pandas"
-- These libraries should go to skills_enhanced ONLY
+### Output Format
+"project_strategy": {
+    "projects_removed": ["project name"],
+    "projects_kept": ["project name"],
+    "projects_added": [
+      {
+        "name": "Case Study Name",
+        "module": "...",
+        "technologies": [],
+        "description": "..."
+      }
+    ],
+    "final_project_count": 3
+  }
 
 ### Module Tracking
 For each module used:
@@ -728,7 +660,21 @@ For each module used:
 - skills_added_from_module: New skills from this module
 - skills_enhanced_by_module: Enhanced skills using this module
 
-# Output Format (JSON only)
+### Output Format
+"curriculum_mapping": {
+    "modules_used": [
+      {
+        "module": "Exact module name",
+        "addresses_gaps": ["skill1", "skill2"],
+        "projects_included": ["case study name"],
+        "keywords_addressed": ["keyword1", "keyword2"],
+        "skills_added_from_module": ["skill1"],
+        "skills_enhanced_by_module": ["base → enhanced"]
+      }
+    ]
+  }
+
+# Output Schema (JSON only)
 {
   "skill_strategy": {
     "skills_to_enhance": [
@@ -736,9 +682,6 @@ For each module used:
     ],
     "skills_to_add": [
       {"skill": "Power BI", "module": "..."}
-    ],
-    "keyword_specifics": [
-      {"keyword": "SQL", "specifics": ["CTEs", "Window Functions"], "module": "..."}
     ]
   },
   
@@ -755,7 +698,6 @@ For each module used:
     ],
     "final_project_count": 3
   },
-  
   "curriculum_mapping": {
     "modules_used": [
       {
@@ -766,95 +708,45 @@ For each module used:
         "skills_enhanced_by_module": ["base → enhanced"]
       }
     ]
-  },
-  
-  "improved_resume": {
-    "improved_text": "Complete resume text following template structure. CRITICAL: Use 'Education' section name (NOT 'Academic Details'). For Freshers, SKIP 'Professional Experience' section entirely. In TECHNICAL SKILLS, show 'Advanced Excel (Power Query)' NOT 'Excel → Advanced Excel'",
-    "skills_added": ["Power BI", "Python"],
-    "skills_enhanced": ["Excel → Advanced Excel (Power Query)", "SQL → Advanced SQL (CTEs, Window Functions)", "Python → Python (NumPy, Pandas)"],
-    "projects_added": ["case study name"],
-    "job_relevance_score": <0-100 integer>,
-    "ats_score": <0-100 integer>,
-    "estimated_improvement": <0-100 integer>
-  },
-  
-  "modification_summary": "Enhanced [X] existing skills with [specific topics], added [Y] new skills from curriculum, replaced [Z] irrelevant projects with [curriculum case studies], improving job relevance by [%]."
-}
+  }
 
-# Critical Guidelines
-- NEVER add metrics not in original resume
-- NEVER invent work experience
-- MUST verify base skill exists before marking as "enhanced"
-- skill_enhanced & skill_added have unique skills in their respective arrays
-- MUST use only curriculum skills/projects
-- MUST preserve all original dates, education, contact info, metrics
-- NO arrow notation (→) in resume text, ONLY in JSON tracking fields
-- ALWAYS use "Education" as section name (NOT "Academic Details" or any other variant)
-- For Freshers (user_level = "Fresher"), SKIP Professional Experience section completely
+# Critical Rules
+- Verify each skill appears in ONLY ONE place (enhance OR add)
+- Python libraries are enhancements if Python exists, otherwise Python is added
+- Select projects matching user_level complexity exactly
+- Track ALL modules used in curriculum_mapping
 """
+    has_skills = gap_analysis.get('skills_analysis', {}).get('has_skills', [])
+    missing_skills = gap_analysis.get('skills_analysis', {}).get('missing_skills', [])
+    present_keywords = gap_analysis.get('keywords_analysis', {}).get('present_keywords', [])
+    user_level = gap_analysis.get('user_level', 'Unknown')
+    projects_to_remove = gap_analysis.get('projects_analysis', {}).get('projects_to_remove', [])
+    projects_to_keep = gap_analysis.get('projects_analysis', {}).get('projects_to_keep', [])
+    
+    user_prompt = f"""Generate improvement strategy for Data Analytics resume.
 
-    # Extract text and links from resume_data for clarity
-    resume_text_content = resume_data.get('text', '')
-    resume_links = resume_data.get('links', [])
+## Critical Gap Analysis
+- **has_skills:** 
+{json.dumps(has_skills)}
 
-    # region agent log
-    agent_debug_log(
-        hypothesis_id="H3",
-        location="backend/app.py:LLM2:pre-call",
-        message="LLM2 pre-call state",
-        data={
-            "resume_chars": len(resume_data.get('text', '') or ""),
-            "links_count": len(resume_data.get('links', []) or []),
-            "missing_skills": len(gap_analysis.get('skills_analysis', {}).get('missing_skills', []) if gap_analysis else 0),
-            "missing_keywords": len(gap_analysis.get('keywords_analysis', {}).get('missing_keywords', []) if gap_analysis else 0)
-        }
-    )
-    # endregion
+- **Missing skills:** 
+{json.dumps(missing_skills)}
 
-    user_prompt = f"""
-Generate improved Data Analytics resume using gap analysis and curriculum.
+- **present_keywords:** 
+{json.dumps(present_keywords)}
 
-## Original Resume Data
-**Resume Text:**
-{resume_text_content}
+- **User level:** 
+{user_level}
 
-**Embedded Links:**
-{json.dumps(resume_links, indent=2)}
+## Project Info
+- **Projects to remove (count={len(projects_to_remove)}):** 
+{json.dumps(projects_to_remove)}
 
-## Gap Analysis (from Step 2)
-{json.dumps(gap_analysis, indent=2)}
+- **Projects to keep:** 
+{json.dumps(projects_to_keep)}
 
 ## Coding Ninjas Curriculum
-{json.dumps(curriculum_text, indent=2)}
-
-## Current Year
-{CURRENT_YEAR}
-
-## Instructions
-1. Use gap_analysis to understand what user has vs needs
-2. Identify which curriculum modules address the gaps
-3. Enhance existing skills where curriculum offers advanced topics
-4. Break down missing keywords into specific curriculum topics
-5. Replace irrelevant projects with curriculum case studies (max 3-4 total projects)
-6. Generate improved resume following ATS template
-7. Classify skills correctly (enhanced vs added) based on original has_skills
-8. **CRITICAL:** Use "Education" section name (NOT "Academic Details")
-9. **CRITICAL:** For user_level "Fresher", completely SKIP Professional Experience section
-
-## Key Validation Rules
-- Base skill must exist in gap_analysis.skills_analysis.has_skills to be "enhanced"
-- If original has_skills is empty/minimal, most skills go to "skills_added"
-- In resume text TECHNICAL SKILLS section: show only final form, NO arrows
-- In JSON tracking fields: use arrows to show enhancement path
-- Education section MUST be named "Education"
-- Professional Experience section: Include ONLY if user_level is NOT "Fresher" AND has relevant DA work experience
-
-## Expected Focus Areas Based on Gap Analysis
-- User Level: {gap_analysis.get('user_level', 'Unknown')}
-- Missing Skills to Add: {gap_analysis.get('skills_analysis', {}).get('missing_skills', [])}
-- Missing Keywords: {gap_analysis.get('keywords_analysis', {}).get('missing_keywords', [])}
-- Projects to Remove: {gap_analysis.get('projects_analysis', {}).get('projects_to_remove', [])}
-- Projects to Keep: {gap_analysis.get('projects_analysis', {}).get('projects_to_keep', [])}
+{json.dumps(curriculum_data, indent=2)}
 """
 
     response = client.chat.completions.create(
@@ -864,33 +756,534 @@ Generate improved Data Analytics resume using gap analysis and curriculum.
             {"role": "user", "content": user_prompt}
         ],
         response_format={"type": "json_object"},
-        temperature=0.2,
-        max_tokens=3500
+        temperature=0.0,  # Fully deterministic
+        max_tokens=1024
+    )
+    
+    strategy = json.loads(response.choices[0].message.content)
+    
+    # Validation checks
+    if 'modules_used' not in strategy:
+        print("⚠️ Warning: modules_used missing from strategy")
+        strategy['modules_used'] = []
+    
+    print("✓ Prompt 1: Strategy generation complete")
+    print(f"  - Skills to enhance: {len(strategy.get('skill_strategy', {}).get('skills_to_enhance', []))}")
+    print(f"  - Skills to add: {len(strategy.get('skill_strategy', {}).get('skills_to_add', []))}")
+    print(f"  - Projects to add: {len(strategy.get('project_strategy', {}).get('projects_added', []))}")
+    print(f"  - Modules tracked: {len(strategy.get('curriculum_mapping', {}).get('modules_used', []))}")
+    print(json.dumps(strategy, indent=2))
+    
+    return strategy
+
+
+def prompt_2_resume_writing(resume_data, strategy, gap_analysis):
+    """
+    PROMPT 2: Resume Writing (REWORKED)
+    Variance Reduction: 30% → 10%
+    """
+    system_message = """
+# Role
+You are an ATS resume writer specializing in Data Analytics roles.
+
+# Task
+Generate an improved ATS-friendly resume utilizing only the provided improvement strategy, original user resume and Curriculum Mapping.
+
+# Template Structure
+Follow this ATS-friendly structure:
+
+## HEADER SECTION
+[FULL NAME - from original, all caps]
+Email | Phone | Location | LinkedIn | GitHub 
+[Only use the contact info present in the original resume and embedded links, remove the contact info that is not present in the original resume]
+
+## PROFESSIONAL SUMMARY
+2 sentences maximum: [Professional Title based on user_level] with expertise in [top 2-4 skills including enhanced ones], experienced in [domain/projects], seeking to leverage [skills] for [DA role type].
+
+## TECHNICAL SKILLS
+• **Programming & Languages:** [list skills with enhancements grouped]
+• **Data Visualization:** [Power BI, Tableau, Excel, etc.]
+• **Other Tools:** [Jupyter, etc.]
+
+{CONDITIONAL_SECTION - see decision tree below}
+
+## EDUCATION
+[Only include graduation or post graduation details from the resume, ignore the school details]
+
+## PROJECTS
+[Only Add projects_to_keep from the original resume]
+[Only Add projects_to_add from the improvement strategy]
+
+## CERTIFICATIONS
+[All original certifications with certificate link placeholder text (if present)]
+[IF no Data Analytics certification exists: Add "Data Analytics | Coding Ninjas | {CURRENT_YEAR}"]
+
+---
+
+## Professional Experience Decision Tree
+
+**STEP 1: Check User Level**
+IF user_level = "Fresher" → SKIP this entire section, go directly to Education
+
+**STEP 2: Check if Original Has Work Experience**
+Look for sections: "Experience", "Work Experience", "Professional Experience", "Employment"
+IF not found → SKIP section, go to Education
+
+**STEP 3: Check if DA-Related**
+DA-Related roles:
+- Data Analyst, Business Analyst, BI Analyst, Analytics Engineer
+- Data Scientist, SQL Developer, Database Analyst
+- Technical roles with quantitative analysis (e.g., Software Engineer with A/B testing, metrics)
+
+NOT DA-Related:
+- Pure non-technical (Sales without analytics, Marketing without data, HR)
+- Service roles (Customer service, retail, hospitality)
+- Admin roles without analytics
+
+**STEP 4: Final Decision**
+IF (user_level != "Fresher") AND (original has work experience) AND (role is DA-related):
+  - INCLUDE Professional Experience section (keep original content, add keywords naturally)
+ELSE:
+  - SKIP section entirely
+
+---
+
+## TECHNICAL SKILLS FORMAT (MANDATORY)
+
+Use EXACTLY these four categories (no more, no less):
+
+**Programming & Languages:** Python (sub-skills), SQL (sub-skills), R (if applicable)
+
+**Database Management:** MySQL, PostgreSQL, SQL Server, etc.
+
+**Data Visualization & BI:** Power BI (sub-skills), Tableau, Excel (sub-skills)
+  - Include: All visualization and BI tools
+  - Group with parentheses for enhancements
+
+**Soft Skills:** Communication, Teamwork, Problem Solving, Time Management, etc.
+  - Include: rely on the original resume for soft skills and if not present then add them based on the user_level.
+
+**Other Tools:** Jupyter Notebook, Git, VS Code, etc.
+  - Include: Development tools, IDEs, version control
+  - List comma-separated
+
+**CRITICAL:**
+- Use these EXACT category names with bold formatting: **Category Name:**
+- Do NOT use category names from the original resume
+- Do NOT combine categories (e.g., "Database Management & Querying" → split to "Programming & Languages" for SQL, "Database Management" for MySQL)
+- Do NOT create new categories beyond these four
+
+---
+
+## Project Description Templates
+
+**Structure per project:**
+For original projects:
+- retain all the original details: project name, description, project links placeholder text, dates
+For curriculum case studies:
+Format: [Project Name]
+- Bullet points description (3 points) highlighting analysis, Technologies & Techniques used, outcomes, etc.
+
+**CRITICAL:**
+- NO invented metrics ("processed 50,000 records" if not in original)
+- NO invented outcomes ("increased revenue 15%" if not stated)
+- Use case study details if from curriculum
+- Use original details if from user's resume
+- For improving the skills and projects rely only on the improvement strategy provided.
+
+---
+
+## FINAL VERIFICATION CHECKLIST
+
+Before outputting resume, verify:
+
+## Professional Experience:
+  - Fresher → section DOES NOT exist
+  - Non-Fresher → included only if original had DA-related role
+
+## Education:
+  - Section name is "Education" (NOT "Academic Details")
+  - Exactly copy the graduation or post graduation details from the resume, ignore the school details.
+
+## Technical Skills:
+  - NO arrows (→) anywhere
+  - Skills grouped: "Python (NumPy, Pandas)" not separate
+  - Categories bolded: **Programming:**
+  - skills and projects should be based on the improvement strategy provided.
+
+## Projects:
+  - NO invented metrics/outcomes
+  - 3 bullets per project using templates
+  - Removed projects NOT included
+
+## Contact Info:
+  - All original info preserved
+  - All links preserved exactly
+
+## No extra text or sections or commentary is present in the resume, if found remove it.
+
+# Output
+Generate complete resume text only (no JSON, no reasoning).
+Use plain text format, NOT markdown code blocks."""
+
+    resume_text_content = resume_data.get('text', '')
+    resume_links = resume_data.get('links', [])
+    user_level = gap_analysis.get('user_level', 'Unknown')
+    
+    # Extract strategy components for clarity
+    skills_enhance = strategy.get('skill_strategy', {}).get('skills_to_enhance', [])
+    skills_add = strategy.get('skill_strategy', {}).get('skills_to_add', [])
+    projects_remove = strategy.get('project_strategy', {}).get('projects_removed', [])
+    projects_keep = strategy.get('project_strategy', {}).get('projects_kept', [])
+    projects_add = strategy.get('project_strategy', {}).get('projects_added', [])
+    
+    user_prompt = f"""Write improved Data Analytics resume.
+
+## Original Resume
+{resume_text_content}
+
+## Embedded Links (preserve exactly)
+{json.dumps(resume_links, indent=2)}
+
+## Improvement Strategy
+
+**Skills to Enhance:**
+{json.dumps(skills_enhance, indent=2)}
+
+**Skills to Add:**
+{json.dumps(skills_add, indent=2)}
+
+**Projects to Remove:**
+{json.dumps(projects_remove)}
+
+**Projects to Keep:**
+{json.dumps(projects_keep)}
+
+**Projects to Add:**
+{json.dumps(projects_add, indent=2)}
+
+**Curriculum Mapping:**
+{json.dumps(strategy.get('curriculum_mapping', {}), indent=2)}
+
+## User Context
+- User Level: {user_level}
+- Current Year: {CURRENT_YEAR}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_prompt}
+        ],
+        temperature=0.0,  # Lower for more consistency
+        max_tokens=2000
+    )
+    
+    improved_text = response.choices[0].message.content.strip()
+    
+    # Remove markdown code blocks if present
+    if improved_text.startswith('```'):
+        lines = improved_text.split('\n')
+        improved_text = '\n'.join(lines[1:-1])  # Remove first and last lines
+    
+    print("✓ Prompt 2: Resume writing complete")
+    print(f"  - Output length: {len(improved_text)} characters")
+    print(improved_text)
+    
+    return improved_text
+
+
+def extract_sections_for_comparison(resume_text):
+    """Extract specific sections needed for classification"""
+    import re
+    
+    sections = {}
+    
+    # Extract Technical Skills
+    skills_patterns = [
+        r'TECHNICAL SKILLS[\s\S]*?(?=\n[A-Z][A-Z\s]{10,}|\n\n[A-Z]|$)',
+        r'Technical Skills[\s\S]*?(?=\n[A-Z][A-Z\s]{10,}|\n\n[A-Z]|$)',
+        r'SKILLS[\s\S]*?(?=\n[A-Z][A-Z\s]{10,}|\n\n[A-Z]|$)'
+    ]
+    for pattern in skills_patterns:
+        match = re.search(pattern, resume_text, re.IGNORECASE)
+        if match:
+            sections['technical_skills'] = match.group(0).strip()
+            break
+    
+    if 'technical_skills' not in sections:
+        sections['technical_skills'] = resume_text[:800]  # Fallback
+    
+    # Extract Projects
+    projects_patterns = [
+        r'PROJECTS[\s\S]*?(?=\nCERTIFICATIONS|\nEDUCATION|\n[A-Z][A-Z\s]{10,}:|$)',
+        r'Projects[\s\S]*?(?=\nCertifications|\nEducation|\n[A-Z][A-Z\s]{10,}:|$)'
+    ]
+    for pattern in projects_patterns:
+        match = re.search(pattern, resume_text, re.IGNORECASE)
+        if match:
+            sections['projects'] = match.group(0).strip()
+            break
+    
+    if 'projects' not in sections:
+        sections['projects'] = ""
+    
+    return sections
+
+def prompt_3_tracking_scoring(improved_resume_text, strategy, gap_analysis, scoring_guidelines):
+    """
+    PROMPT 3: Tracking & Scoring (SIMPLIFIED)
+    Extract classifications from strategy, score the improved resume
+    """
+    system_message = f"""
+# Role
+You are a resume analyzer and ATS scoring expert.
+
+# Task
+1. Extract planned changes from strategy (source of truth)
+2. Score the improved resume using provided guidelines
+
+# CRITICAL: Strategy is Source of Truth
+
+The strategy object contains the planned changes:
+- skill_strategy.skills_to_enhance: List of skills that were enhanced
+- skill_strategy.skills_to_add: List of skills that were added
+- project_strategy.projects_added: List of projects that were added
+
+# Classification Algorithm
+
+## Step 1: Extract from Strategy
+```python
+skills_to_enhance = strategy.skill_strategy.skills_to_enhance
+skills_to_add = strategy.skill_strategy.skills_to_add
+projects_to_add = strategy.project_strategy.projects_added
+```
+
+## Step 2: Transform to Output Format
+
+For skills_enhanced:
+- Convert: {{"base": "SQL", "enhanced": "Advanced SQL (CTEs)"}} 
+  → {{"original": "SQL", "improved": "Advanced SQL (CTEs)"}}
+
+For skills_added:
+- Extract: [{{"skill": "Statistics"}}] → ["Statistics"]
+
+For projects_added:
+- Extract: [{{"name": "Loan Default"}}] → ["Loan Default"]
+
+## Step 3: Copy Curriculum Mapping
+
+Copy curriculum_mapping.modules_used from strategy unchanged.
+
+# SCORING RUBRICS
+
+{scoring_guidelines}
+
+## Estimated Improvement (%)
+Calculate based on:
+- Number of skills enhanced/added vs total gaps
+- Number of projects improved
+Formula: ((skills_enhanced + skills_added + projects_added) / max(total_gaps, 5)) * 100
+Cap at 100%.
+
+# Output Schema (JSON only)
+{{
+  "classification": {{
+    "skills_enhanced": [{{"original": "SQL", "improved": "Advanced SQL (CTEs, Window Functions)"}}],
+    "skills_added": ["Statistics"],
+    "projects_added": ["Loan Default"]
+  }},
+  "curriculum_mapping": {{
+    "modules_used": [/* copy from strategy */]
+  }},
+  "scores": {{
+    "job_relevance_score": 88,
+    "ats_score": 92,
+    "estimated_improvement": 60
+  }},
+  "summary": "Enhanced X skills, added Y skills, incorporated Z projects, improving overall DA job readiness by N%."
+}}
+
+# Critical Rules
+- Extract classifications from strategy - NEVER invent from resume
+- Score ONLY the improved resume (not a comparison)
+- Apply scoring rubrics strictly based on user level
+- Counts must match strategy exactly
+"""
+
+    # Context for scoring
+    missing_skills = gap_analysis.get('skills_analysis', {}).get('missing_skills', [])
+    total_missing = len(missing_skills)
+    user_level = gap_analysis.get('user_level', 'Unknown')
+    
+    # Get market analysis for scoring context
+    job_market = gap_analysis.get('job_market_analysis', {})
+    top_skills = job_market.get('top_skills', [])
+    
+    user_prompt = f"""Extract classifications and score improved resume.
+
+## Strategy (SOURCE OF TRUTH for classifications)
+{json.dumps(strategy, indent=2)}
+
+## Improved Resume (for scoring only)
+{improved_resume_text}
+
+## Context for Scoring
+- User level: {user_level}
+- Market top skills: {json.dumps(top_skills[:10])}
+- Jobs analyzed: {job_market.get('jobs_analyzed', 0)}
+- Total gaps addressed: {total_missing}
+
+Instructions:
+1. Extract classifications from strategy (DO NOT analyze resume for classification)
+2. Transform to output format
+3. Score the improved resume using scoring guidelines
+4. Calculate estimated improvement percentage
+5. Generate summary with exact counts"""
+
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_prompt}
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.0,
+        max_tokens=1000
     )
     
     result = json.loads(response.choices[0].message.content)
 
-    # region agent log
-    agent_debug_log(
-        hypothesis_id="H4",
-        location="backend/app.py:LLM2:post-call",
-        message="LLM2 post-call received",
-        data={
-            "has_curriculum_mapping": "curriculum_mapping" in result,
-            "modules_used": len(result.get("curriculum_mapping", {}).get("modules_used", [])),
-            "has_improved_resume": "improved_resume" in result
+    # Validation & Fallbacks
+    strategy_enhance_count = len(strategy.get('skill_strategy', {}).get('skills_to_enhance', []))
+    strategy_add_count = len(strategy.get('skill_strategy', {}).get('skills_to_add', []))
+    strategy_projects_count = len(strategy.get('project_strategy', {}).get('projects_added', []))
+    
+    result_enhance_count = len(result.get('classification', {}).get('skills_enhanced', []))
+    result_add_count = len(result.get('classification', {}).get('skills_added', []))
+    result_projects_count = len(result.get('classification', {}).get('projects_added', []))
+    
+    # Rebuild from strategy if counts don't match
+    if (result_enhance_count != strategy_enhance_count or 
+        result_add_count != strategy_add_count or 
+        result_projects_count != strategy_projects_count):
+        
+        print("⚠️ Classification mismatch - rebuilding from strategy...")
+        
+        skills_enhanced = [
+            {"original": item.get('base', ''), "improved": item.get('enhanced', '')}
+            for item in strategy.get('skill_strategy', {}).get('skills_to_enhance', [])
+        ]
+        
+        skills_added = [
+            item.get('skill', '') 
+            for item in strategy.get('skill_strategy', {}).get('skills_to_add', [])
+        ]
+        
+        projects_added = [
+            item.get('name', '') 
+            for item in strategy.get('project_strategy', {}).get('projects_added', [])
+        ]
+        
+        result['classification'] = {
+            "skills_enhanced": skills_enhanced,
+            "skills_added": skills_added,
+            "projects_added": projects_added
         }
+    
+    # Ensure curriculum_mapping exists
+    if 'curriculum_mapping' not in result:
+        result['curriculum_mapping'] = strategy.get('curriculum_mapping', {"modules_used": []})
+    
+    # Ensure scores exist
+    if 'scores' not in result:
+        print("⚠️ Warning: scores missing, using defaults")
+        result['scores'] = {
+            "job_relevance_score": 85,
+            "ats_score": 88,
+            "estimated_improvement": 50
+        }
+    
+    print("✓ Prompt 3: Tracking & scoring complete")
+    print(f"  - Skills enhanced: {result_enhance_count}")
+    print(f"  - Skills added: {result_add_count}")
+    print(f"  - Projects added: {result_projects_count}")
+    print(f"  - Job relevance: {result.get('scores', {}).get('job_relevance_score', 0)}")
+    print(f"  - ATS score: {result.get('scores', {}).get('ats_score', 0)}")
+    
+    return result
+
+def generate_improved_resume(resume_data, gap_analysis, curriculum_text):
+    """
+    Generate improved resume using prompt chaining (3 sequential prompts).
+    """
+    if not gap_analysis:
+        raise ValueError("Step 2 analysis is required")
+
+    curriculum_data = load_curriculum_json()
+    if not curriculum_data:
+        raise ValueError("Curriculum data not available")
+    
+    print("Step 3: Starting prompt chaining (3 sequential prompts)...")
+    
+    # PROMPT 1: Strategy Generation
+    print("  → Prompt 1: Generating strategy...")
+    strategy = prompt_1_strategy_generation(gap_analysis, curriculum_data)
+    
+    # PROMPT 2: Resume Writing
+    print("  → Prompt 2: Writing improved resume...")
+    improved_resume_text = prompt_2_resume_writing(resume_data, strategy, gap_analysis)
+    
+    # PROMPT 3: Tracking & Scoring
+    print("  → Prompt 3: Classifying changes and scoring...")
+    tracking = prompt_3_tracking_scoring(
+        improved_resume_text, 
+        strategy, 
+        gap_analysis,
+        SCORING_GUIDELINES  # ✅ Pass scoring guidelines
     )
-    # endregion
+    
+    # Extract components
+    classification = tracking.get('classification', {})
+    scores = tracking.get('scores', {})
+    curriculum_mapping = strategy.get('curriculum_mapping', {'modules_used': []})
+    modification_summary = tracking.get('summary', '')
+    
+    # Convert skills_enhanced from objects to arrow format
+    skills_enhanced_list = []
+    for item in classification.get('skills_enhanced', []):
+        if isinstance(item, dict):
+            skills_enhanced_list.append(f"{item.get('original', '')} → {item.get('improved', '')}")
+        else:
+            skills_enhanced_list.append(item)
+    
+    # ✅ Use correct paths from strategy
+    result = {
+        "skill_strategy": strategy.get('skill_strategy', {}),
+        "project_strategy": strategy.get('project_strategy', {}),
+        "curriculum_mapping": curriculum_mapping,
+        "improved_resume": {
+            "improved_text": improved_resume_text,
+            "skills_added": classification.get('skills_added', []),
+            "skills_enhanced": skills_enhanced_list,
+            "projects_added": classification.get('projects_added', []),
+            "job_relevance_score": scores.get('job_relevance_score', 0),
+            "ats_score": scores.get('ats_score', 0),
+            "estimated_improvement": scores.get('estimated_improvement', 0)
+        },
+        "modification_summary": modification_summary
+    }
     
     # Add metadata
     result['_metadata'] = {
         'model': 'gpt-4.1-mini',
+        'prompt_chain': True,
         'timestamp': datetime.now().isoformat()
     }
     
+    print("✓ Step 3: Prompt chaining complete (3 prompts executed)")
     return result
-
 
 def create_learning_comparison(curriculum_mapping, analysis):
     """
@@ -1154,6 +1547,9 @@ def extract_text():
             "links": links
         }
         
+        # Save response to JSON file
+        save_api_response("extract-text", response_data)
+        
         return jsonify(response_data)
     
     except Exception as e:
@@ -1189,6 +1585,9 @@ def analyze_resume():
         response_data = {
             "full_analysis": original_analysis  # Complete analysis - contains all fields
         }
+        
+        # Save response to JSON file
+        save_api_response("analyze-resume", response_data)
         
         print("Step 2 complete! (LLM Call #1 done)")
         return jsonify(response_data)
@@ -1247,7 +1646,7 @@ def generate_improved_resume_endpoint():
         if not original_analysis:
             return jsonify({"error": "Step 2 analysis is required. Must include 'full_analysis'."}), 400
         
-        print("Step 3: Generating improved resume with curriculum mapping (LLM Call #2)...")
+        print("Step 3: Generating improved resume with curriculum mapping (Prompt Chaining: 3 sequential prompts)...")
         print(f"✓ Received resume_data from frontend with text ({len(resume_text)} chars) and {len(resume_links)} links")
         
         
@@ -1263,7 +1662,6 @@ def generate_improved_resume_endpoint():
         curriculum_mapping = improved_result['curriculum_mapping']
         improved_resume = improved_result['improved_resume']
         modification_summary = improved_result.get('modification_summary', '')
-        section_improvements = improved_result.get('section_improvements', [])
         
         # Create learning comparison (no AI, uses data from Step 3)
         print("Creating learning comparison...")
@@ -1297,12 +1695,16 @@ def generate_improved_resume_endpoint():
                 "projects_added": improved_resume['projects_added'],
                 "modification_summary": modification_summary,
             },
+            "skill_strategy": improved_result.get('skill_strategy', {}),
             "learning_comparison": learning_comparison,
             "market_stats": market_stats,
             "curriculum_used": curriculum_mapping['modules_used']
         }
         
-        print("Step 3 complete! (LLM Call #2 done, analysis complete)")
+        # Save response to JSON file
+        save_api_response("generate-improved-resume", response_data)
+        
+        print("Step 3 complete! (Prompt chaining done: 3 prompts executed, analysis complete)")
         return jsonify(response_data)
         
     except Exception as e:

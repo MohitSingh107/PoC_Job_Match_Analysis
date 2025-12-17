@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AlertCircle, TrendingUp, Briefcase, ArrowLeft, CheckCircle, Target, Zap, XCircle, UploadCloud, Lightbulb, Link as LinkIcon, Info, Clock, Lock } from 'lucide-react';
+import { AlertCircle, Briefcase, ArrowLeft, CheckCircle, XCircle, UploadCloud, Lightbulb, Link as LinkIcon, Info, Clock, Lock, ChevronLeft, ChevronRight, GraduationCap } from 'lucide-react';
 import { config } from './config';
 import './App.css';
 import jsPDF from 'jspdf';
@@ -31,6 +31,75 @@ ChartJS.register(
 // ============================================================================
 // Specialized Header Formatting Helpers (shared across components)
 // ============================================================================
+// Helper function to find project-specific GitHub link based on project name
+const findProjectGitHubLink = (projectName, extractedLinks) => {
+  if (!extractedLinks || extractedLinks.length === 0 || !projectName) return null;
+  
+  const normalizedProjectName = projectName.toLowerCase().trim();
+  
+  // Normalize project name for matching (remove common words, handle variations)
+  const normalizeForMatching = (name) => {
+    return name
+      .toLowerCase()
+      .replace(/\s+/g, '-')  // Replace spaces with hyphens
+      .replace(/[^a-z0-9_-]/g, '') // Remove special chars
+      .replace(/-+/g, '-')   // Normalize multiple hyphens
+      .replace(/_+/g, '_');  // Normalize multiple underscores
+  };
+  
+  const normalizedProject = normalizeForMatching(normalizedProjectName);
+  
+  // Extract key words from project name for fuzzy matching
+  const projectKeywords = normalizedProjectName
+    .split(/\s+/)
+    .filter(word => word.length > 2) // Filter out short words
+    .map(word => word.toLowerCase());
+  
+  for (const link of extractedLinks) {
+    if (!link.url || !link.text) continue;
+    
+    const url = link.url.toLowerCase();
+    
+    // Only process GitHub links
+    if (!url.includes('github.com')) continue;
+    
+    // Extract repository name from URL (format: github.com/username/repo-name)
+    const repoMatch = url.match(/github\.com\/[^/]+\/([^/?]+)/);
+    if (!repoMatch) continue;
+    
+    const repoName = repoMatch[1].toLowerCase();
+    const normalizedRepo = normalizeForMatching(repoName);
+    
+    // Try exact match first
+    if (normalizedRepo === normalizedProject || repoName === normalizedProject) {
+      return link.url;
+    }
+    
+    // Try partial match - check if repo name contains project keywords
+    const repoContainsProject = projectKeywords.some(keyword => 
+      normalizedRepo.includes(keyword) || repoName.includes(keyword)
+    );
+    
+    // Also check if project name contains repo keywords
+    const repoKeywords = repoName.split(/[-_]/).filter(w => w.length > 2);
+    const projectContainsRepo = repoKeywords.some(keyword =>
+      normalizedProject.includes(keyword) || normalizedProjectName.includes(keyword)
+    );
+    
+    if (repoContainsProject || projectContainsRepo) {
+      return link.url;
+    }
+    
+    // Try matching key parts (e.g., "phonepe" matches "PhonePe-Python")
+    const projectKeyPart = projectKeywords.find(kw => kw.length > 4); // Use longest keyword
+    if (projectKeyPart && (normalizedRepo.includes(projectKeyPart) || repoName.includes(projectKeyPart))) {
+      return link.url;
+    }
+  }
+  
+  return null;
+};
+
 const findUrlFromExtractedLinks = (lineText, extractedLinks, linkType) => {
   if (!extractedLinks || extractedLinks.length === 0) return null;
   
@@ -366,9 +435,6 @@ const parseHeaderContent = (content, extractedLinks = []) => {
 const renderImprovedHeader = (headerData) => {
   if (!headerData) return null;
   
-  console.log('🔵 renderImprovedHeader CALLED!', headerData);
-  console.error('🔴 TEST ERROR - renderImprovedHeader is running!');
-  
   return (
     <div style={{ marginBottom: '1.2rem', textAlign: 'center' }}>
       {/* Name - Bold and Prominent */}
@@ -659,9 +725,7 @@ const renderOriginalHeader = (headerData) => {
 };
 
 const formatHeaderSection = (content, isImproved = false, extractedLinks = []) => {
-  console.log('formatHeaderSection called - isImproved:', isImproved, 'content:', content?.substring(0, 100));
   const headerData = parseHeaderContent(content, extractedLinks);
-  console.log('formatHeaderSection - parsed headerData:', headerData);
   
   if (!headerData) return null;
   
@@ -947,38 +1011,55 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
         entryLines.forEach(line => {
           const trimmed = line.trim();
           
-          // Check for duration (year patterns)
-          if (!duration && /(\d{4}\s*[-–—]\s*\d{4}|\d{4}\s*[-–—]\s*Present|\d{4}\s*[-–—]\s*Current)/i.test(trimmed)) {
-            duration = trimmed.replace(/.*?(\d{4}\s*[-–—]\s*(?:\d{4}|Present|Current)).*/i, '$1');
-          }
-          
-          // Check for CGPA/GPA/Percentage
+          // Check for CGPA/GPA/Percentage (usually on separate line)
           if (!cgpa) {
             // Try CGPA first
             const cgpaMatch = trimmed.match(/CGPA\s*:?\s*[\d.]+/i);
             if (cgpaMatch) {
               cgpa = cgpaMatch[0];
+              return; // Skip further processing for CGPA line
             } else {
               // Try GPA
               const gpaMatch = trimmed.match(/GPA\s*:?\s*[\d.]+/i);
               if (gpaMatch) {
                 cgpa = gpaMatch[0];
+                return; // Skip further processing for GPA line
               } else {
                 // Try Percentage
                 const percentMatch = trimmed.match(/(Percentage|%)\s*:?\s*[\d.]+/i);
                 if (percentMatch) {
                   cgpa = percentMatch[0];
+                  return; // Skip further processing for percentage line
                 } else if (/^\d+\.\d+%?$/.test(trimmed) && trimmed.length < 10) {
                   // Standalone CGPA/GPA number (e.g., "7.47" or "3.5")
                   cgpa = `CGPA: ${trimmed}`;
+                  return; // Skip further processing
                 }
               }
             }
           }
           
-          // Check for degree
+          // Check for degree line that might contain duration (format: "Degree | Duration")
           if (!degree && /\b(B\.Tech|B\.E\.|B\.Sc\.|M\.Tech|M\.B\.A|Bachelor|Master|Degree|BE|BTech|MTech)\b/i.test(trimmed)) {
+            // Check if degree line contains duration (has pipe separator with dates)
+            if (trimmed.includes('|') && /(\d{4}\s*[-–—]\s*\d{4}|\d{4}\s*[-–—]\s*Present|\d{4}\s*[-–—]\s*Current)/i.test(trimmed)) {
+              const parts = trimmed.split('|').map(p => p.trim());
+              degree = parts[0]; // First part is degree
+              // Extract duration from remaining parts
+              const durationMatch = trimmed.match(/(\d{4}\s*[-–—]\s*(?:\d{4}|Present|Current))/i);
+              if (durationMatch && !duration) {
+                duration = durationMatch[1];
+              }
+            } else {
             degree = trimmed;
+            }
+            return; // Skip further processing for degree line
+          }
+          
+          // Check for duration on standalone line (only if not already found in degree line)
+          if (!duration && /(\d{4}\s*[-–—]\s*\d{4}|\d{4}\s*[-–—]\s*Present|\d{4}\s*[-–—]\s*Current)/i.test(trimmed)) {
+            duration = trimmed.replace(/.*?(\d{4}\s*[-–—]\s*(?:\d{4}|Present|Current)).*/i, '$1');
+            return; // Skip further processing for duration line
           }
           
           // Check for university (long names with University/College/Institute, or if no other match)
@@ -1016,41 +1097,54 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
           }
         }
         
+        // Render education entry - handle different layouts generically
         return (
           <div key={`edu-entry-${entryIdx}`} style={{ marginTop: entryIdx > 0 ? sectionSpacing : '0', marginBottom: textMargin }}>
-            {/* First line: University (bold, left) | CGPA (regular, right) */}
+            {/* First line: University (bold) - only show if university exists */}
+            {university && (
             <div style={{ 
               fontSize: '10pt', 
               fontWeight: 700, 
               color: '#000000', 
-              marginBottom: '0.1rem', 
+                marginBottom: (degree || duration || cgpa) ? '0.1rem' : '0', 
               lineHeight: smallLineHeight, 
-              fontFamily: 'Helvetica, Arial, sans-serif',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              width: '100%'  // ADD THIS
+                fontFamily: 'Helvetica, Arial, sans-serif'
             }}>
-              <span style={{ flex: 1 }}>{university || ''}</span>
-              {cgpa && <span style={{ fontWeight: 400, whiteSpace: 'nowrap', marginLeft: '1rem' }}>{cgpa}</span>}
+                {university}
             </div>
+            )}
             
-            {/* Second line: Degree (regular, left) | Duration (regular, right) */}
+            {/* Second line: Degree (regular, left) | Duration (regular, right) - only show if degree exists */}
+            {degree && (
             <div style={{ 
               fontSize: '10pt', 
               fontWeight: 400, 
               color: '#000000', 
-              marginBottom: '0.1rem', 
+                marginBottom: (duration && duration !== degree) || cgpa ? '0.1rem' : '0', 
               lineHeight: smallLineHeight, 
               fontFamily: 'Helvetica, Arial, sans-serif',
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              width: '100%'  // ADD THIS
+                alignItems: 'flex-start'
             }}>
-              <span style={{ flex: 1 }}>{degree || ''}</span>
-              {duration && <span style={{ whiteSpace: 'nowrap', marginLeft: '1rem' }}>{duration}</span>}
+                <span style={{ flex: 1 }}>{degree}</span>
+                {duration && duration !== degree && <span style={{ whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>{duration}</span>}
             </div>
+            )}
+            
+            {/* Third line: CGPA (if exists and not already shown) */}
+            {cgpa && (
+              <div style={{ 
+                fontSize: '10pt', 
+                fontWeight: 400, 
+                color: '#000000', 
+                marginBottom: '0', 
+                lineHeight: smallLineHeight, 
+                fontFamily: 'Helvetica, Arial, sans-serif'
+              }}>
+                {cgpa}
+              </div>
+            )}
           </div>
         );
       });
@@ -1078,25 +1172,33 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
                              /Email|Phone|Mob|Mobile|Contact/i.test(trimmed) ||
                              /\d{10}/.test(trimmed));
       
-      // Check for project title - format: "Project Name | Technology | URL" or standalone project name
+      // Check for project title - format: "Project Name | Technology | GitHub" or standalone project name
       const hasUrl = /https?:\/\/[^\s]+/i.test(trimmed);
       const hasPipeSeparators = trimmed.includes('|') && trimmed.split('|').length >= 2;
       const isProjectTitle = sectionType === 'projects' && 
                              !isBullet && 
                              !trimmed.toLowerCase().startsWith('technologies:') &&
                              !trimmed.toLowerCase().startsWith('certificate link:') &&
+                             !/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|October|November|December|January|February|March|April|June|July|August|September|Oct|Nov|Dec)[a-z]* \d{4}$/i.test(trimmed) && // Not a date line
                              (trimmed.includes('[') || 
                               hasUrl ||
                               (hasPipeSeparators && trimmed.length > 10 && trimmed.length < 150) ||
                               (trimmed.length > 10 && trimmed.length < 100 && 
                                !trimmed.includes(':') && 
                                !trimmed.match(/^\d+[.)]/)));
+      
+      // Check for project date - format: "Sept 2025", "Aug 2025", "September 2025", etc. (comes after project title)
+      const isProjectDate = sectionType === 'projects' && 
+                            !isBullet && 
+                            !isProjectTitle &&
+                            /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|October|November|December|January|February|March|April|June|July|August|September|Oct|Nov|Dec)[a-z]* \d{4}$/i.test(trimmed);
+      
       const isTechnologiesLine = sectionType === 'projects' && 
                                   /^Technologies:\s*/i.test(trimmed);
       
-      // Check for certificate link line
+      // Check for certificate link line (with or without colon)
       const isCertificateLinkLine = sectionType === 'certifications' && 
-                                    /^Certificate Link:\s*/i.test(trimmed);
+                                    /^Certificate Link:?\s*$/i.test(trimmed);
       
       // Check for certification entry - format: "Title | Organization | Year" or "Organization"
       const isCertificationEntry = sectionType === 'certifications' && 
@@ -1180,11 +1282,13 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
         formattedLines.push({ type: 'degree', content: trimmed, key: `degree-${idx}`, diffType });
       } else if (isProjectTitle) {
         formattedLines.push({ type: 'project-title', content: trimmed, key: `project-${idx}`, diffType });
+      } else if (isProjectDate) {
+        formattedLines.push({ type: 'project-date', content: trimmed, key: `project-date-${idx}`, diffType });
       } else if (isTechnologiesLine) {
         const techContent = trimmed.replace(/^Technologies:\s*/i, '');
         formattedLines.push({ type: 'technologies', content: techContent, key: `tech-${idx}`, diffType });
       } else if (isCertificateLinkLine) {
-        const linkContent = trimmed.replace(/^Certificate Link:\s*/i, '');
+        const linkContent = trimmed.replace(/^Certificate Link:?\s*/i, '').trim();
         formattedLines.push({ type: 'certificate-link', content: linkContent, key: `cert-link-${idx}`, diffType });
       } else if (isCertificationEntry) {
         formattedLines.push({ type: 'certification-entry', content: trimmed, key: `cert-${idx}`, diffType });
@@ -1204,53 +1308,60 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
     const textMargin = '0.2rem';
     
     return formattedLines.map((item) => {
-      const diffClassName = item.diffType ? `diff-${item.diffType === 'add' ? 'add' : item.diffType === 'remove' ? 'remove' : 'modify'}` : '';
-      
       switch (item.type) {
         case 'break':
           return <br key={item.key} />;
         
         case 'name-header':
           return (
-            <div key={item.key} className={diffClassName} style={{ fontSize: '12pt', fontWeight: 700, color: '#000000', marginBottom: sectionSpacing, lineHeight: '1.2', fontFamily: 'Helvetica, Arial, sans-serif' }}>
+            <div key={item.key} style={{ fontSize: '12pt', fontWeight: 700, color: '#000000', marginBottom: sectionSpacing, lineHeight: '1.2', fontFamily: 'Helvetica, Arial, sans-serif' }}>
               {item.content}
             </div>
           );
         
         case 'contact':
           return (
-            <div key={item.key} className={diffClassName} style={{ fontSize: '9pt', color: '#000000', marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
+            <div key={item.key} style={{ fontSize: '9pt', color: '#000000', marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
               {item.content}
             </div>
           );
         
         case 'job-header':
           return (
-            <div key={item.key} className={diffClassName} style={{ fontSize: '10pt', fontWeight: 700, color: '#000000', marginTop: sectionSpacing, marginBottom: '0.1rem', lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
+            <div key={item.key} style={{ fontSize: '10pt', fontWeight: 700, color: '#000000', marginTop: sectionSpacing, marginBottom: '0.1rem', lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
               {item.content}
             </div>
           );
         
         case 'date':
           return (
-            <div key={item.key} className={diffClassName} style={{ fontSize: '9pt', color: '#000000', marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
+            <div key={item.key} style={{ fontSize: '9pt', color: '#000000', marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
               {item.content}
             </div>
           );
         
         case 'degree':
           return (
-            <div key={item.key} className={diffClassName} style={{ fontSize: '10pt', fontWeight: 700, color: '#000000', marginTop: sectionSpacing, marginBottom: '0.1rem', lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
+            <div key={item.key} style={{ fontSize: '10pt', fontWeight: 700, color: '#000000', marginTop: sectionSpacing, marginBottom: '0.1rem', lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
               {item.content}
             </div>
           );
         
         case 'project-title':
-          // Parse project title format: "Project Name | Technology | URL" or "Project Name | URL"
+          // Parse project title format: "Project Name | Technology | GitHub" or "Project Name | Technology"
           const projectParts = item.content.split('|').map(p => p.trim());
           let projectName = '';
           let projectTech = '';
           let projectUrl = '';
+          let hasGitHubText = false;
+          
+          // Check if any part contains "GitHub" or "Github" text
+          const githubTextIndex = projectParts.findIndex(part => /github/i.test(part));
+          if (githubTextIndex !== -1) {
+            hasGitHubText = true;
+            // Remove GitHub text from parts
+            projectParts.splice(githubTextIndex, 1);
+          }
           
           // Extract URL (usually the last part that starts with http)
           const urlIndex = projectParts.findIndex(part => /^https?:\/\//i.test(part));
@@ -1267,26 +1378,36 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
             }
           } else {
             // Fallback: if no pipe separators, use whole content
-            projectName = item.content.replace(/\[CN Project\]/g, '').trim();
+            projectName = item.content.replace(/\[CN Project\]/g, '').replace(/github/gi, '').trim();
           }
           
+          // Check if this is a Coding Ninjas project (projects with logo don't have links)
           const projectsAdded = diffData?.projectsAdded || [];
           const isAddedProject = projectsAdded.some(addedProject => {
             const normalizedAdded = addedProject.toLowerCase().trim();
             const normalizedTitle = projectName.toLowerCase().trim();
-            return normalizedTitle === normalizedAdded || 
-                   normalizedTitle.includes(normalizedAdded) ||
-                   normalizedAdded.includes(normalizedTitle);
+            return normalizedTitle === normalizedAdded; // Exact match only
           });
           
+          // Find project-specific GitHub link based on project name (only if NOT a Coding Ninjas project)
+          if (!isAddedProject && (hasGitHubText || !projectUrl) && projectName && extractedLinks) {
+            const projectSpecificUrl = findProjectGitHubLink(projectName, extractedLinks);
+            if (projectSpecificUrl) {
+              projectUrl = projectSpecificUrl;
+              hasGitHubText = true; // Ensure we show the link
+            }
+          }
+          
           return (
-            <div key={item.key} className={diffClassName} style={{ fontSize: '10pt', fontWeight: 700, color: '#000000', marginTop: sectionSpacing, marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
+            <div key={item.key} style={{ fontSize: '10pt', fontWeight: 700, color: '#000000', marginTop: sectionSpacing, marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
               <span>
                 {projectName}
                 {projectTech && <span style={{ fontWeight: 400, color: '#4b5563' }}> | {projectTech}</span>}
-                {projectUrl && (
+                {/* Only show GitHub link if NOT a Coding Ninjas project */}
+                {!isAddedProject && (projectUrl || hasGitHubText) && (
                   <>
                     {(projectName || projectTech) && <span style={{ fontWeight: 400, color: '#4b5563' }}> | </span>}
+                    {projectUrl ? (
                     <a 
                       href={projectUrl} 
                       target="_blank" 
@@ -1295,10 +1416,15 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
                     >
                       GitHub
                     </a>
+                    ) : (
+                      <span style={{ fontWeight: 400, color: '#4b5563' }}>GitHub</span>
+                    )}
                   </>
                 )}
               </span>
               {isAddedProject && (
+                <>
+                  <span style={{ fontWeight: 400, color: '#4b5563' }}> | </span>
                 <img 
                   src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTEMYetPQ2J3r1xQQ36xkvL0HRXp7p_YH4mgA&s" 
                   alt="Coding Ninjas" 
@@ -1309,25 +1435,133 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
                     display: 'inline-block'
                   }} 
                 />
+                </>
               )}
+            </div>
+          );
+        
+        case 'project-date':
+          return (
+            <div key={item.key} style={{ fontSize: '9pt', color: '#000000', marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
+              {item.content}
             </div>
           );
         
         case 'technologies':
           return (
-            <div key={item.key} className={diffClassName} style={{ fontSize: '10pt', color: '#000000', marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
+            <div key={item.key} style={{ fontSize: '10pt', color: '#000000', marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
               <span style={{ fontWeight: 700 }}>Technologies:</span> {item.content}
             </div>
           );
         
         case 'certificate-link':
-          // Extract URL from the link content
+          // Extract URL from the link content or try to find from extractedLinks
+          let certUrl = null;
           const certUrlMatch = item.content.match(/https?:\/\/[^\s]+/i);
-          const certUrl = certUrlMatch ? certUrlMatch[0] : item.content.trim();
+          if (certUrlMatch) {
+            certUrl = certUrlMatch[0];
+          } else {
+            // Try to find certificate link from extractedLinks
+            // First, look for exact text match "Certificate Link" or similar
+            if (extractedLinks && extractedLinks.length > 0) {
+              // Look for links with "Certificate Link" text (exact match)
+              for (const link of extractedLinks) {
+                if (!link.url || !link.text) continue;
+                const linkText = link.text.toLowerCase().trim();
+                const url = link.url.toLowerCase();
+                
+                // Skip known social/professional platforms
+                if (url.includes('linkedin.com') || url.includes('github.com') || 
+                    url.includes('kaggle.com') || url.includes('twitter.com') ||
+                    url.includes('facebook.com') || url.includes('instagram.com')) {
+                  continue;
+                }
+                
+                // Check for exact match: link text is exactly "certificate link" (most reliable)
+                if (linkText === 'certificate link' || linkText.includes('certificate link')) {
+                  certUrl = link.url;
+                  break;
+                }
+              }
+              
+              // If no exact match found, try other methods
+              if (!certUrl) {
+                for (const link of extractedLinks) {
+                  if (!link.url || !link.text) continue;
+                  const linkText = link.text.toLowerCase().trim();
+                  const url = link.url.toLowerCase();
+                  
+                  // Skip known social/professional platforms
+                  if (url.includes('linkedin.com') || url.includes('github.com') || 
+                      url.includes('kaggle.com') || url.includes('twitter.com') ||
+                      url.includes('facebook.com') || url.includes('instagram.com')) {
+                    continue;
+                  }
+                  
+                  // Check for certificate-related keywords
+                  const hasCertKeywords = linkText.includes('certificate') || linkText.includes('certification') ||
+                                         linkText.includes('cert') || linkText.includes('credential') ||
+                                         linkText.includes('badge') || linkText.includes('verify');
+                  
+                  // Check if URL looks like a certificate/credential URL
+                  const looksLikeCertUrl = url.includes('certificate') || url.includes('credential') ||
+                                          url.includes('verify') || url.includes('badge') ||
+                                          url.includes('coursera.org') || url.includes('udemy.com') ||
+                                          url.includes('edx.org') || url.includes('coursera') ||
+                                          url.match(/\/certificate|\/cert|\/verify|\/badge/i);
+                  
+                  // Also check for common certificate hosting platforms
+                  const isCertHostingPlatform = url.includes('drive.google.com') || 
+                                               url.includes('dropbox.com') ||
+                                               url.includes('onedrive.com') ||
+                                               url.includes('credly.com') ||
+                                               url.includes('accredible.com');
+                  
+                  if ((hasCertKeywords && !url.includes('github') && !url.includes('linkedin')) || 
+                      looksLikeCertUrl || (isCertHostingPlatform && hasCertKeywords)) {
+                    certUrl = link.url;
+                    break;
+                  }
+                }
+              }
+            }
+            
+            // Fallback: try generic portfolio link matching
+            if (!certUrl && extractedLinks && extractedLinks.length > 0) {
+              // Try to find any non-social media link that might be a certificate
+              for (const link of extractedLinks) {
+                if (!link.url || !link.text) continue;
+                const url = link.url.toLowerCase();
+                
+                // Skip social media
+                if (url.includes('linkedin.com') || url.includes('github.com') || 
+                    url.includes('kaggle.com') || url.includes('twitter.com')) {
+                  continue;
+                }
+                
+                // If it's a Google Drive or similar file hosting link, it might be a certificate
+                if (url.includes('drive.google.com') || url.includes('dropbox.com') || 
+                    url.includes('onedrive.com')) {
+                  certUrl = link.url;
+                  break;
+                }
+              }
+            }
+            
+            // Last resort: if there's text content that looks like a URL, use it
+            if (!certUrl && item.content.trim()) {
+              const trimmedContent = item.content.trim();
+              // Check if it looks like a domain name
+              if (trimmedContent.match(/^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.[a-zA-Z]{2,}/)) {
+                certUrl = trimmedContent.startsWith('http') ? trimmedContent : `https://${trimmedContent}`;
+              }
+            }
+          }
           
           return (
-            <div key={item.key} className={diffClassName} style={{ fontSize: '10pt', color: '#000000', marginBottom: '0.1rem', lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
+            <div key={item.key} style={{ fontSize: '10pt', color: '#000000', marginBottom: '0.1rem', lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
               <span style={{ fontWeight: 700 }}>Certificate Link:</span>{' '}
+              {certUrl ? (
               <a 
                 href={certUrl} 
                 target="_blank" 
@@ -1336,6 +1570,9 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
               >
                 View Certificate
               </a>
+              ) : (
+                <span style={{ color: '#6b7280', fontStyle: 'italic' }}>Link not available</span>
+              )}
             </div>
           );
         
@@ -1367,7 +1604,7 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
           }
           
           return (
-            <div key={item.key} className={diffClassName} style={{ fontSize: '10pt', fontWeight: 700, color: '#000000', marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
+            <div key={item.key} style={{ fontSize: '10pt', fontWeight: 700, color: '#000000', marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
               {certTitle && <span>{certTitle}</span>}
               {certOrg && (
                 <span>
@@ -1380,17 +1617,43 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
           );
         
         case 'bullet':
+          // Parse markdown bold (**text**) for skills and other sections
+          const parseMarkdownBold = (text) => {
+            if (!text) return text;
+            const parts = [];
+            let lastIndex = 0;
+            const regex = /\*\*(.*?)\*\*/g;
+            let match;
+            
+            while ((match = regex.exec(text)) !== null) {
+              // Add text before the bold
+              if (match.index > lastIndex) {
+                parts.push(text.substring(lastIndex, match.index));
+              }
+              // Add bold text
+              parts.push(<strong key={match.index}>{match[1]}</strong>);
+              lastIndex = regex.lastIndex;
+            }
+            
+            // Add remaining text
+            if (lastIndex < text.length) {
+              parts.push(text.substring(lastIndex));
+            }
+            
+            return parts.length > 0 ? parts : text;
+          };
+          
           return (
-            <div key={item.key} className={diffClassName} style={{ paddingLeft: '0.4rem', marginBottom: bulletMargin, color: '#000000', fontSize: '10pt', lineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
+            <div key={item.key} style={{ paddingLeft: '0.4rem', marginBottom: bulletMargin, color: '#000000', fontSize: '10pt', lineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
               <span style={{ marginRight: '0.3rem' }}>-</span>
-              <span>{item.content}</span>
+              <span>{parseMarkdownBold(item.content)}</span>
             </div>
           );
         
         case 'text':
         default:
           return (
-            <div key={item.key} className={diffClassName} style={{ marginBottom: textMargin, color: '#000000', fontSize: '10pt', lineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
+            <div key={item.key} style={{ marginBottom: textMargin, color: '#000000', fontSize: '10pt', lineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
               {item.content}
             </div>
           );
@@ -1560,11 +1823,6 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
             );
           }
           
-          // Check if this is a new section
-          const isNewSection = diffData.newSections.some(newSection => 
-            newSection.toLowerCase() === section.name.toLowerCase()
-          );
-          
           return (
             <div key={sectionIdx} style={{ marginBottom: '0.85rem' }}>
               <div style={{
@@ -1584,11 +1842,6 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
                   lineHeight: '1.2'
                 }}>
                   {section.name}
-                  {isNewSection && (
-                    <span className="diff-add" style={{ marginLeft: '0.5rem', fontSize: '9pt', fontWeight: 500 }}>
-                      (NEW)
-                    </span>
-                  )}
                 </h3>
               </div>
               <div style={{ padding: 0, background: '#ffffff', marginTop: '0.25rem' }}>
@@ -1734,55 +1987,16 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
   return (
     <div style={{
       background: 'white',
-      borderRadius: '12px',
-      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-      border: '1px solid #e2e8f0',
       marginBottom: '2rem',
       overflow: 'hidden'
     }}>
-      <style>{`
-        .diff-add {
-          background-color: rgba(52, 211, 153, 0.2);
-          border-radius: 0.25rem;
-          padding: 0 0.25rem;
-          box-decoration-break: clone;
-          -webkit-box-decoration-break: clone;
-        }
-        .diff-remove {
-          background-color: rgba(248, 113, 113, 0.2);
-          text-decoration: line-through;
-          text-decoration-color: rgba(220, 38, 38, 0.5);
-          border-radius: 0.25rem;
-          padding: 0 0.25rem;
-          box-decoration-break: clone;
-          -webkit-box-decoration-break: clone;
-        }
-        .diff-modify {
-          background-color: rgba(139, 92, 246, 0.2);
-          border-radius: 0.25rem;
-          padding: 0 0.25rem;
-          box-decoration-break: clone;
-          -webkit-box-decoration-break: clone;
-        }
-      `}</style>
 
       {/* Header with controls */}
-      <div style={{ padding: '2rem 2rem 1.5rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem' }}>
-          Resume Comparison
+      <div style={{ padding: '0.5rem 2rem 2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f172a', margin: 0, textAlign: 'center' }}>
+          Your Resume, Reinvented
         </h2>
-        <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '2rem' }}>
-          Visually compare the changes between your original and improved resume.
-        </p>
 
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem'
-        }}>
           {/* View Toggle Buttons */}
           <div style={{
             display: 'flex',
@@ -1844,43 +2058,6 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
             >
               Improved
             </button>
-          </div>
-
-          {/* Legend - Only show in Side-by-Side view */}
-          {currentView === 'side-by-side' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{
-                  width: '12px',
-                  height: '12px',
-                  borderRadius: '50%',
-                  background: '#f87171',
-                  border: '2px solid #fecaca'
-                }} />
-                <span style={{ fontSize: '0.875rem', color: '#64748b', fontWeight: 500 }}>Removed</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{
-                  width: '12px',
-                  height: '12px',
-                  borderRadius: '50%',
-                  background: '#34d399',
-                  border: '2px solid #a7f3d0'
-                }} />
-                <span style={{ fontSize: '0.875rem', color: '#64748b', fontWeight: 500 }}>Added</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{
-                  width: '12px',
-                  height: '12px',
-                  borderRadius: '50%',
-                  background: '#a78bfa',
-                  border: '2px solid #ddd6fe'
-                }} />
-                <span style={{ fontSize: '0.875rem', color: '#64748b', fontWeight: 500 }}>Modified</span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -2013,6 +2190,230 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
           </div>
         )}
       </div>
+    </div>
+  );
+};
+
+// Testimonials Carousel Component
+const TestimonialsCarousel = () => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const testimonials = [
+    {
+      name: "Priya Sharma",
+      role: "Data Scientist @ Infosys",
+      image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop",
+      quote: "The data science program at Coding Ninjas was a game-changer. I landed my dream role thanks to their practical approach and expert mentorship.",
+      badge: "+45% Job Match"
+    },
+    {
+      name: "Rahul Kumar",
+      role: "Machine Learning Engineer @ Wipro",
+      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop",
+      quote: "From zero to a skilled ML engineer. Coding Ninjas provided the structured learning path and career support I needed.",
+      badge: "Now @ Wipro"
+    },
+    {
+      name: "Sneha Patel",
+      role: "Business Analyst @ Accenture",
+      image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop",
+      quote: "The case studies and real-world projects were invaluable. I felt confident tackling complex problems during my interviews.",
+      badge: "Secured first job"
+    },
+    {
+      name: "Amit Singh",
+      role: "Data Analyst",
+      image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop",
+      quote: "Coding Ninjas helped me bridge my skill gaps and meet industry requirements. Highly recommend for aspiring data professionals.",
+      badge: "Secured first job"
+    }
+  ];
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % testimonials.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+  };
+
+  return (
+    <div style={{ position: 'relative', width: '100%', maxWidth: '100%', margin: '0 auto', overflow: 'hidden' }}>
+      <button
+        onClick={prevSlide}
+        style={{
+          position: 'absolute',
+          left: '-16px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          zIndex: 10,
+          padding: '0.75rem',
+          background: 'white',
+          borderRadius: '50%',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'all 0.2s',
+          width: '40px',
+          height: '40px'
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.background = '#f9fafb';
+          e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.background = 'white';
+          e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+        }}
+      >
+        <ChevronLeft style={{ width: '20px', height: '20px', color: '#64748b' }} />
+      </button>
+
+      <div style={{ 
+        display: 'flex',
+        gap: '1.5rem',
+        padding: '0 3rem',
+        maxWidth: '1400px',
+        margin: '0 auto',
+        overflow: 'visible'
+      }}>
+        {testimonials.map((testimonial, idx) => {
+          const isLastCard = idx === testimonials.length - 1;
+          const cardStyle = { 
+            background: '#FFFFFF',
+              borderRadius: '12px',
+            padding: '1rem',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              display: 'flex',
+            flexDirection: 'column',
+            width: '340px',
+            height: '322px',
+            minWidth: '340px',
+            flexShrink: 0
+          };
+          
+          if (isLastCard) {
+            cardStyle.marginRight = '-170px'; // Show half of the last card
+          }
+          
+          return (
+          <div 
+            key={`${currentSlide}-${idx}`}
+            style={cardStyle}
+          >
+            {/* Header: Profile image and name/title side by side */}
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem',marginTop: '1rem' }}>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <img
+                  src={testimonial.image}
+                  alt={testimonial.name}
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '2px solid #f3f4f6'
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3 style={{ 
+                  fontSize: '1rem', 
+                  fontWeight: 700, 
+                  color: '#111827', 
+                  marginBottom: '0.25rem',
+                  lineHeight: '1.2'
+                }}>
+                  {testimonial.name}
+                </h3>
+                <p style={{ 
+                  color: '#6b7280', 
+                  fontSize: '0.875rem', 
+                  marginBottom: '0.5rem',
+                  lineHeight: '1.4'
+                }}>
+                  {testimonial.role}
+                </p>
+                {/* Company logo icon */}
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  marginTop: '0.25rem'
+                }}>
+                  <Briefcase style={{ width: '16px', height: '16px', color: '#9ca3af' }} />
+                </div>
+              </div>
+            </div>
+            
+            {/* Quote text */}
+            <p style={{ 
+              color: '#171A1F', 
+              fontStyle: 'italic', 
+              fontFamily: 'Inter',
+              marginBottom:'1.5rem',
+              lineHeight: '1.6',
+              fontSize: '0.9375rem'
+            }}>
+              {testimonial.quote}
+            </p>
+            
+            {/* Badge at bottom */}
+            {testimonial.badge && (
+              <div>
+                <span style={{
+                  background: '#F66C3B',
+                  color: 'white',
+                  fontFamily: 'Inter',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '60px',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  display: 'inline-block'
+                }}>
+                  {testimonial.badge}
+                </span>
+              </div>
+            )}
+          </div>
+          );
+        })}
+      </div>
+
+      <button
+        onClick={nextSlide}
+        style={{
+          position: 'absolute',
+          right: '-16px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          zIndex: 10,
+          padding: '0.75rem',
+          background: 'white',
+          borderRadius: '50%',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'all 0.2s',
+          width: '40px',
+          height: '40px'
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.background = '#f9fafb';
+          e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.background = 'white';
+          e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+        }}
+      >
+        <ChevronRight style={{ width: '20px', height: '20px', color: '#64748b' }} />
+      </button>
     </div>
   );
 };
@@ -2221,7 +2622,6 @@ const ResumeAnalyzer = () => {
       setStep('results');
       setCurrentStep(null); // Clear currentStep only after transitioning to results
     } catch (err) {
-      console.error('Analysis error:', err);
       setError(err.message || 'Resume analysis failed. Please try again.');
       setStep('upload');
       setCompletedSteps([]);
@@ -2539,7 +2939,7 @@ const ResumeAnalyzer = () => {
               pdf.text('CN', logoX, logoY + 2);
               pdf.setTextColor(0, 0, 0);
             } catch (e) {
-              console.error('Error adding CN badge:', e);
+              // Silently handle error adding CN badge
             }
           }
           
@@ -2836,9 +3236,9 @@ if (step === 'upload') {
         accept=".pdf,.doc,.docx,.txt,.rtf" 
         />
 
-      <div style={{ maxWidth: '100%', backgroundColor: '#FEF4F1', padding: '3rem',marginBottom: '1rem' }}>
+      <div style={{ maxWidth: '100%', backgroundColor: '#FEF4F1', padding: '3rem 2rem', marginBottom: '1rem' }}>
         {/* Title with Icon */}
-        <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
           <h1 style={{ 
             fontSize: '2rem', 
             fontWeight: 700, 
@@ -2862,7 +3262,7 @@ if (step === 'upload') {
           display: 'flex',
           alignItems: 'center',
           flexDirection: 'column',
-          
+          marginBottom: '2rem'
         }}>
           <p style={{ 
             textAlign: 'center',
@@ -2871,24 +3271,22 @@ if (step === 'upload') {
             lineHeight: 1.6,
             maxWidth: '700px',
             letterSpacing:'0.01rem',
-            marginLeft: 'auto',
-            marginRight: 'auto',
+            margin: 0,
             fontWeight: 400,
-            fontFamily: "Inter",
-            margin: 0
+            fontFamily: "Inter"
           }}>
             Upload your resume to see how job-ready you are for a Data Science career. We'll analyze your resume and analyse the gaps based on 10000+ Data Analytics job postings
           </p>
         </div>
          </div>
+
         {/* Step Indicator */}
-        <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 1.5rem' }}>
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 2rem' }}>
         <div style={{ 
                 display: 'flex',
           flexDirection: 'column', 
                 alignItems: 'center',
                 gap: '0.5rem',
-                marginRight: '80px',
           marginBottom: '2rem'
         }}>
           <span style={{ 
@@ -2929,7 +3327,7 @@ if (step === 'upload') {
         </div>
 
         {/* File Upload Zone */}
-        <div style={{ marginBottom: '2rem' }}>
+        <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'center' }}>
           {!file ? (
             <div style={{
               border: '0.5px solid #DEE1E6',
@@ -2938,8 +3336,7 @@ if (step === 'upload') {
               textAlign: 'center',
               cursor: 'pointer',
               maxWidth: '460px',
-              marginLeft: '100px',
-              marginBottom: '2rem',
+              width: '100%',
               backgroundColor: '#FFFFFF',
               transition: 'all 0.3s ease'
             }}>
@@ -2971,6 +3368,7 @@ if (step === 'upload') {
                 textAlign: 'center',
                 cursor: 'pointer',
                 maxWidth: '400px',
+                margin: '0 auto',
                 backgroundColor: '#FFFFFF',
                 transition: 'all 0.3s ease'
               }}
@@ -3037,7 +3435,9 @@ if (step === 'upload') {
               display: 'flex',
                     alignItems: 'center', 
               justifyContent: 'space-between',
-              gap: '1rem'
+              gap: '1rem',
+              maxWidth: '460px',
+              width: '100%'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
                 <CheckCircle size={24} style={{ color: '#10B981', flexShrink: 0 }} />
@@ -3089,12 +3489,15 @@ if (step === 'upload') {
           </div>
 
         {/* LinkedIn Profile Input (Optional) */}
-        <div style={{ marginBottom: '2rem', marginLeft: '60px' }} >
+        <div style={{ marginBottom: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ 
             display: 'flex', 
             alignItems: 'center', 
             gap: '0.5rem', 
-            marginBottom: '0.75rem' 
+            marginBottom: '0.75rem',
+            maxWidth: '525px',
+            width: '100%',
+            justifyContent: 'center'
           }}>
             <Lightbulb size={18} style={{ color: '#6B7280' }} />
             <p style={{ 
@@ -3108,7 +3511,7 @@ if (step === 'upload') {
             </p>
                 </div>
 
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center' }}>
               <div style={{ 
                 display: 'flex',
                 alignItems: 'center',
@@ -3118,6 +3521,7 @@ if (step === 'upload') {
                 backgroundColor: '#FFFFFF',
                 gap: '0.75rem',
                 maxWidth: '525px',
+              width: '100%'
               }}>
                 <LinkIcon size={20} style={{ color: '#6B7280', flexShrink: 0 }} />
                 <input
@@ -3148,7 +3552,7 @@ if (step === 'upload') {
 
             {/* Upload Progress Bar */}
             {linkedinUploading && (
-              <div style={{ marginTop: '0.75rem' }}>
+              <div style={{ marginTop: '0.75rem', width: '100%', maxWidth: '525px' }}>
                   <div style={{ 
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -3198,7 +3602,9 @@ if (step === 'upload') {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: '1rem',
-                animation: 'fadeIn 0.3s ease'
+                animation: 'fadeIn 0.3s ease',
+                width: '100%',
+                maxWidth: '525px'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
                   <div style={{
@@ -3263,15 +3669,19 @@ if (step === 'upload') {
             color: colors.errorRed, 
             display: 'flex', 
             alignItems: 'center', 
+            justifyContent: 'center',
             gap: '0.5rem',
-            fontSize: '0.875rem'
+            fontSize: '0.875rem',
+            maxWidth: '525px',
+            marginLeft: 'auto',
+            marginRight: 'auto'
             }}>
             <AlertCircle size={18} /> {error}
           </div>
         )}
 
         {/* CTA Button */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem', marginRight: '60px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
                  <button 
             onClick={() => {
               if (file) {
@@ -3400,9 +3810,9 @@ if (step === 'analyzing') {
   return (
     <div style={{ 
       minHeight: '100vh', 
-      background: '#111827', 
+      background: '#FFFFFF', 
       fontFamily: "'Sora', sans-serif",
-      color: '#E5E7EB',
+      color: '#111827',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -3415,10 +3825,10 @@ if (step === 'analyzing') {
         @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400&display=swap');
         
         .glassmorphism-dark {
-          background: rgba(17, 24, 39, 0.3);
+          background: rgba(255, 255, 255, 0.8);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(229, 231, 235, 0.8);
         }
         
         @keyframes softGlow {
@@ -3582,6 +3992,7 @@ if (step === 'analyzing') {
           background: linear-gradient(to right, #6366F1, transparent);
           transform-origin: left;
           animation: progress-line-anim 2s infinite alternate;
+          opacity: 0.6;
         }
       `}</style>
       
@@ -3589,7 +4000,7 @@ if (step === 'analyzing') {
       <div style={{
         position: 'absolute',
         inset: 0,
-        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px)',
+        backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.03) 1px, transparent 1px)',
         backgroundSize: '20px 20px',
         maskImage: 'radial-gradient(ellipse at center, transparent 20%, black)',
         WebkitMaskImage: 'radial-gradient(ellipse at center, transparent 20%, black)'
@@ -3646,10 +4057,10 @@ if (step === 'analyzing') {
             </div>
             
             <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <h1 style={{ fontSize: '2rem', fontWeight: 700, color: 'white', letterSpacing: '-0.025em' }}>
+              <h1 style={{ fontSize: '2rem', fontWeight: 700, color: '#111827', letterSpacing: '-0.025em', fontFamily: "Archivo" }}>
                 AI Analysis in Progress...
               </h1>
-              <p style={{ fontSize: '1.125rem', color: '#9CA3AF', maxWidth: '512px' }}>
+              <p style={{ fontSize: '1.125rem', color: '#565D6D', maxWidth: '512px', fontFamily: "Inter" }}>
                 Our AI is starting to analyze your resume...
               </p>
             </div>
@@ -3662,10 +4073,11 @@ if (step === 'analyzing') {
                 gap: '1.5rem',
                 padding: '1.5rem',
                 borderRadius: '1rem',
-                background: 'rgba(17, 24, 39, 0.3)',
+                background: '#FFFFFF',
                 backdropFilter: 'blur(20px)',
                 WebkitBackdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
+                border: '1px solid #E5E7EB',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <div style={{
@@ -3675,15 +4087,15 @@ if (step === 'analyzing') {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'rgba(99, 102, 241, 0.2)',
+                    background: 'rgba(99, 102, 241, 0.1)',
                     borderRadius: '50%',
                     border: '1px solid #6366F1',
                     animation: 'pulse 2s ease-in-out infinite'
                   }}>
-                    <span className="material-symbols-outlined" style={{ color: '#818CF8', fontSize: '16px' }}>search</span>
+                    <span className="material-symbols-outlined" style={{ color: '#6366F1', fontSize: '16px' }}>search</span>
                   </div>
                   <div>
-                    <h3 style={{ fontWeight: 600, color: 'white' }}>Scanning Keywords...</h3>
+                    <h3 style={{ fontWeight: 600, color: '#111827', fontFamily: "Archivo" }}>Scanning Keywords...</h3>
                   </div>
                 </div>
                 
@@ -3698,8 +4110,8 @@ if (step === 'analyzing') {
                     <span style={{
                       padding: '0.25rem 0.5rem',
                       fontSize: '0.875rem',
-                      color: '#C7D2FE',
-                      background: 'rgba(99, 102, 241, 0.2)',
+                      color: '#6366F1',
+                      background: 'rgba(99, 102, 241, 0.1)',
                       borderRadius: '0.375rem',
                       animation: 'keywordAppear 5s ease-in-out infinite 0s'
                     }}>Leadership</span>
@@ -3708,8 +4120,8 @@ if (step === 'analyzing') {
                     <span style={{
                       padding: '0.25rem 0.5rem',
                       fontSize: '0.875rem',
-                      color: '#C7D2FE',
-                      background: 'rgba(99, 102, 241, 0.2)',
+                      color: '#6366F1',
+                      background: 'rgba(99, 102, 241, 0.1)',
                       borderRadius: '0.375rem',
                       animation: 'keywordAppear 5s ease-in-out infinite 1s'
                     }}>React</span>
@@ -3718,8 +4130,8 @@ if (step === 'analyzing') {
                     <span style={{
                       padding: '0.25rem 0.5rem',
                       fontSize: '0.875rem',
-                      color: '#C7D2FE',
-                      background: 'rgba(99, 102, 241, 0.2)',
+                      color: '#6366F1',
+                      background: 'rgba(99, 102, 241, 0.1)',
                       borderRadius: '0.375rem',
                       animation: 'keywordAppear 5s ease-in-out infinite 2s'
                     }}>Agile</span>
@@ -3728,8 +4140,8 @@ if (step === 'analyzing') {
                     <span style={{
                       padding: '0.25rem 0.5rem',
                       fontSize: '0.875rem',
-                      color: '#C7D2FE',
-                      background: 'rgba(99, 102, 241, 0.2)',
+                      color: '#6366F1',
+                      background: 'rgba(99, 102, 241, 0.1)',
                       borderRadius: '0.375rem',
                       animation: 'keywordAppear 5s ease-in-out infinite 3s'
                     }}>Project Management</span>
@@ -3740,7 +4152,7 @@ if (step === 'analyzing') {
             
             <div style={{ width: '100%', maxWidth: '512px', paddingTop: '2rem' }}>
               <div style={{ padding: '1rem', borderRadius: '1rem', textAlign: 'center' }}>
-                <p style={{ fontSize: '0.875rem', color: '#6B7280', fontStyle: 'italic' }}>
+                <p style={{ fontSize: '0.875rem', color: '#565D6D', fontStyle: 'italic', fontFamily: "Inter" }}>
                   Did you know? Tailoring your resume to each job can increase your chances of getting an interview.
                 </p>
               </div>
@@ -3781,10 +4193,10 @@ if (step === 'analyzing') {
             </div>
             
             <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <h1 style={{ fontSize: '2rem', fontWeight: 700, color: 'white', letterSpacing: '-0.025em' }}>
+              <h1 style={{ fontSize: '2rem', fontWeight: 700, color: '#111827', letterSpacing: '-0.025em', fontFamily: "Archivo" }}>
                 AI Analysis in Progress...
               </h1>
-              <p style={{ fontSize: '1.125rem', color: '#9CA3AF', maxWidth: '512px' }}>
+              <p style={{ fontSize: '1.125rem', color: '#565D6D', maxWidth: '512px', fontFamily: "Inter" }}>
                 Our AI is meticulously analyzing your resume against the job description to provide you with powerful, data-driven insights.
               </p>
             </div>
@@ -3798,10 +4210,11 @@ if (step === 'analyzing') {
                 gap: '1.5rem',
                 padding: '1.5rem',
                 borderRadius: '1rem',
-                background: 'rgba(17, 24, 39, 0.3)',
+                background: '#FFFFFF',
                 backdropFilter: 'blur(20px)',
                 WebkitBackdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
+                border: '1px solid #E5E7EB',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
               }}>
                 {/* Step 1: Complete */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', width: '160px', opacity: 0.5 }}>
@@ -3811,15 +4224,15 @@ if (step === 'analyzing') {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'rgba(34, 197, 94, 0.2)',
+                    background: 'rgba(34, 197, 94, 0.1)',
                     borderRadius: '50%',
                     border: '1px solid #22C55E',
                     marginBottom: '0.5rem'
                   }}>
-                    <span className="material-symbols-outlined" style={{ color: '#4ADE80', fontSize: '16px' }}>check</span>
+                    <span className="material-symbols-outlined" style={{ color: '#22C55E', fontSize: '16px' }}>check</span>
                   </div>
-                  <h3 style={{ fontWeight: 600, color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.875rem' }}>Scanning Keywords</h3>
-                  <p style={{ fontSize: '0.75rem', color: '#6B7280' }}>Complete</p>
+                  <h3 style={{ fontWeight: 600, color: '#111827', fontSize: '0.875rem', fontFamily: "Archivo" }}>Scanning Keywords</h3>
+                  <p style={{ fontSize: '0.75rem', color: '#565D6D', fontFamily: "Inter" }}>Complete</p>
                 </div>
                 
                 {/* Step 2: Processing */}
@@ -3830,19 +4243,19 @@ if (step === 'analyzing') {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'rgba(99, 102, 241, 0.2)',
+                    background: 'rgba(99, 102, 241, 0.1)',
                     borderRadius: '50%',
-                    border: '2px solid #818CF8',
+                    border: '2px solid #6366F1',
                     marginBottom: '0.25rem'
                   }}>
                     <div style={{ display: 'flex', gap: '0.25rem' }}>
-                      <div style={{ width: '6px', height: '6px', background: '#C7D2FE', borderRadius: '50%', animation: 'dotPulse 1.4s infinite ease-in-out both' }}></div>
-                      <div style={{ width: '6px', height: '6px', background: '#C7D2FE', borderRadius: '50%', animation: 'dotPulse 1.4s 0.2s infinite ease-in-out both' }}></div>
-                      <div style={{ width: '6px', height: '6px', background: '#C7D2FE', borderRadius: '50%', animation: 'dotPulse 1.4s 0.4s infinite ease-in-out both' }}></div>
+                      <div style={{ width: '6px', height: '6px', background: '#6366F1', borderRadius: '50%', animation: 'dotPulse 1.4s infinite ease-in-out both' }}></div>
+                      <div style={{ width: '6px', height: '6px', background: '#6366F1', borderRadius: '50%', animation: 'dotPulse 1.4s 0.2s infinite ease-in-out both' }}></div>
+                      <div style={{ width: '6px', height: '6px', background: '#6366F1', borderRadius: '50%', animation: 'dotPulse 1.4s 0.4s infinite ease-in-out both' }}></div>
                     </div>
                   </div>
-                  <h3 style={{ fontWeight: 600, color: 'white', fontSize: '1rem' }}>Evaluating Job Match</h3>
-                  <p style={{ fontSize: '0.75rem', color: '#C7D2FE' }}>Processing...</p>
+                  <h3 style={{ fontWeight: 600, color: '#111827', fontSize: '1rem', fontFamily: "Archivo" }}>Evaluating Job Match</h3>
+                  <p style={{ fontSize: '0.75rem', color: '#6366F1', fontFamily: "Inter" }}>Processing...</p>
                   <div className="progress-line" style={{ width: '50%' }}></div>
                 </div>
                 
@@ -3854,15 +4267,15 @@ if (step === 'analyzing') {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'rgba(107, 114, 128, 0.2)',
+                    background: 'rgba(107, 114, 128, 0.1)',
                     borderRadius: '50%',
-                    border: '1px solid #4B5563',
+                    border: '1px solid #9CA3AF',
                     marginBottom: '0.5rem'
                   }}>
-                    <span className="material-symbols-outlined" style={{ color: '#6B7280', fontSize: '16px' }}>hourglass_top</span>
+                    <span className="material-symbols-outlined" style={{ color: '#9CA3AF', fontSize: '16px' }}>hourglass_top</span>
                   </div>
-                  <h3 style={{ fontWeight: 600, color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.875rem' }}>Synthesizing Improvements</h3>
-                  <p style={{ fontSize: '0.75rem', color: '#6B7280' }}>Pending</p>
+                  <h3 style={{ fontWeight: 600, color: '#111827', fontSize: '0.875rem', fontFamily: "Archivo" }}>Synthesizing Improvements</h3>
+                  <p style={{ fontSize: '0.75rem', color: '#565D6D', fontFamily: "Inter" }}>Pending</p>
                 </div>
               </div>
             </div>
@@ -3872,12 +4285,12 @@ if (step === 'analyzing') {
                 padding: '1.25rem',
                 borderRadius: '1rem',
                 textAlign: 'center',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid #E5E7EB',
+                background: '#F9FAFB',
                 overflow: 'hidden'
               }}>
-                <p key={currentFactIndex} style={{ fontSize: '0.875rem', color: '#D1D5DB', animation: 'factFade 8s ease-in-out infinite', transition: 'opacity 0.5s ease-in-out' }}>
-                  <span style={{ fontWeight: 700, color: '#818CF8' }}>Did you know?</span> {didYouKnowFacts[currentFactIndex]}
+                <p key={currentFactIndex} style={{ fontSize: '0.875rem', color: '#565D6D', animation: 'factFade 8s ease-in-out infinite', transition: 'opacity 0.5s ease-in-out', fontFamily: "Inter" }}>
+                  <span style={{ fontWeight: 700, color: '#6366F1' }}>Did you know?</span> {didYouKnowFacts[currentFactIndex]}
                 </p>
               </div>
             </div>
@@ -3995,10 +4408,10 @@ if (step === 'analyzing') {
             </div>
             
             <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <h1 style={{ fontSize: '2rem', fontWeight: 700, color: 'white', letterSpacing: '-0.025em' }}>
+              <h1 style={{ fontSize: '2rem', fontWeight: 700, color: '#111827', letterSpacing: '-0.025em', fontFamily: "Archivo" }}>
                 Finalizing Your Analysis...
               </h1>
-              <p style={{ fontSize: '1.125rem', color: '#C7D2FE', fontWeight: 500 }}>Get Ready!</p>
+              <p style={{ fontSize: '1.125rem', color: '#6366F1', fontWeight: 500, fontFamily: "Inter" }}>Get Ready!</p>
             </div>
             
             <div style={{ width: '100%', maxWidth: '512px' }}>
@@ -4008,10 +4421,11 @@ if (step === 'analyzing') {
                 alignItems: 'center',
                 padding: '1.5rem',
                 borderRadius: '1rem',
-                background: 'rgba(17, 24, 39, 0.3)',
+                background: '#FFFFFF',
                 backdropFilter: 'blur(20px)',
                 WebkitBackdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
+                border: '1px solid #E5E7EB',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
                   <div style={{
@@ -4020,16 +4434,16 @@ if (step === 'analyzing') {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'rgba(99, 102, 241, 0.2)',
+                    background: 'rgba(99, 102, 241, 0.1)',
                     borderRadius: '50%',
                     border: '1px solid #6366F1',
                     animation: 'pulse 2s ease-in-out infinite'
                   }}>
-                    <span className="material-symbols-outlined" style={{ color: '#818CF8', fontSize: '16px' }}>psychology</span>
+                    <span className="material-symbols-outlined" style={{ color: '#6366F1', fontSize: '16px' }}>psychology</span>
                   </div>
                   <div>
-                    <h3 style={{ fontWeight: 600, color: 'white' }}>Synthesizing Improvements</h3>
-                    <p style={{ fontSize: '0.875rem', color: '#9CA3AF' }}>Applying final enhancements...</p>
+                    <h3 style={{ fontWeight: 600, color: '#111827', fontFamily: "Archivo" }}>Synthesizing Improvements</h3>
+                    <p style={{ fontSize: '0.875rem', color: '#565D6D', fontFamily: "Inter" }}>Applying final enhancements...</p>
                   </div>
                 </div>
                 
@@ -4042,7 +4456,7 @@ if (step === 'analyzing') {
                   gap: '0.5rem',
                   padding: '0.5rem',
                   borderRadius: '0.5rem',
-                  background: 'rgba(0, 0, 0, 0.2)'
+                  background: '#F9FAFB'
                 }}>
                   {[4, 8, 5, 10, 8, 12, 10, 16, 12, 10, 14, 12, 16, 10].map((height, idx) => (
                     <div
@@ -4066,11 +4480,11 @@ if (step === 'analyzing') {
                 padding: '1.25rem',
                 borderRadius: '1rem',
                 textAlign: 'center',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                background: 'rgba(255, 255, 255, 0.05)'
+                border: '1px solid #E5E7EB',
+                background: '#F9FAFB'
               }}>
-                <p key={currentFactIndex} style={{ fontSize: '0.875rem', color: '#D1D5DB', animation: 'factFade 8s ease-in-out infinite', transition: 'opacity 0.5s ease-in-out' }}>
-                  <span style={{ fontWeight: 700, color: '#818CF8' }}>💡 Did you know?</span> {didYouKnowFacts[currentFactIndex]}
+                <p key={currentFactIndex} style={{ fontSize: '0.875rem', color: '#565D6D', animation: 'factFade 8s ease-in-out infinite', transition: 'opacity 0.5s ease-in-out', fontFamily: "Inter" }}>
+                  <span style={{ fontWeight: 700, color: '#6366F1' }}>💡 Did you know?</span> {didYouKnowFacts[currentFactIndex]}
                 </p>
               </div>
             </div>
@@ -4664,8 +5078,6 @@ if (step === 'analyzing') {
     const renderImprovedHeader = (headerData) => {
       if (!headerData) return null;
       
-      console.log('renderImprovedHeader (inner) called with:', headerData);
-      
       return (
         <div style={{ marginBottom: '1.2rem', textAlign: 'center' }}>
           {/* Name - Bold and Prominent */}
@@ -4948,22 +5360,17 @@ if (step === 'analyzing') {
     };
     
     const formatHeaderSection = (content, isImproved = false, extractedLinks = []) => {
-      console.log('formatHeaderSection (local) called - isImproved:', isImproved, 'content:', content?.substring(0, 100));
       const headerData = parseHeaderContent(content, extractedLinks);
-      console.log('formatHeaderSection (local) - parsed headerData:', headerData);
       if (!headerData) return null;
       return isImproved ? renderImprovedHeader(headerData) : renderOriginalHeader(headerData);
     };
     // ============================================================================
     
     const formatSectionContent = (content, sectionType, compact = false, isImproved = false, extractedLinks = []) => {
-      console.log('🟢 formatSectionContent called - sectionType:', sectionType, 'isImproved:', isImproved);
       if (!content) {
-        console.log('⚠️ formatSectionContent - content is empty!');
         return null;
       }
       if (sectionType === 'header') {
-        console.log('✅ formatSectionContent - HEADER detected! Calling formatHeaderSection');
         return formatHeaderSection(content, isImproved, extractedLinks);
       }
       
@@ -5029,38 +5436,55 @@ if (step === 'analyzing') {
           entryLines.forEach(line => {
             const trimmed = line.trim();
             
-            // Check for duration (year patterns)
-            if (!duration && /(\d{4}\s*[-–—]\s*\d{4}|\d{4}\s*[-–—]\s*Present|\d{4}\s*[-–—]\s*Current)/i.test(trimmed)) {
-              duration = trimmed.replace(/.*?(\d{4}\s*[-–—]\s*(?:\d{4}|Present|Current)).*/i, '$1');
-            }
-            
-            // Check for CGPA/GPA/Percentage
+            // Check for CGPA/GPA/Percentage (usually on separate line)
             if (!cgpa) {
               // Try CGPA first
               const cgpaMatch = trimmed.match(/CGPA\s*:?\s*[\d.]+/i);
               if (cgpaMatch) {
                 cgpa = cgpaMatch[0];
+                return; // Skip further processing for CGPA line
               } else {
                 // Try GPA
                 const gpaMatch = trimmed.match(/GPA\s*:?\s*[\d.]+/i);
                 if (gpaMatch) {
                   cgpa = gpaMatch[0];
+                  return; // Skip further processing for GPA line
                 } else {
                   // Try Percentage
                   const percentMatch = trimmed.match(/(Percentage|%)\s*:?\s*[\d.]+/i);
                   if (percentMatch) {
                     cgpa = percentMatch[0];
+                    return; // Skip further processing for percentage line
                   } else if (/^\d+\.\d+%?$/.test(trimmed) && trimmed.length < 10) {
                     // Standalone CGPA/GPA number (e.g., "7.47" or "3.5")
                     cgpa = `CGPA: ${trimmed}`;
+                    return; // Skip further processing
                   }
                 }
               }
             }
             
-            // Check for degree
+            // Check for degree line that might contain duration (format: "Degree | Duration")
             if (!degree && /\b(B\.Tech|B\.E\.|B\.Sc\.|M\.Tech|M\.B\.A|Bachelor|Master|Degree|BE|BTech|MTech)\b/i.test(trimmed)) {
+              // Check if degree line contains duration (has pipe separator with dates)
+              if (trimmed.includes('|') && /(\d{4}\s*[-–—]\s*\d{4}|\d{4}\s*[-–—]\s*Present|\d{4}\s*[-–—]\s*Current)/i.test(trimmed)) {
+                const parts = trimmed.split('|').map(p => p.trim());
+                degree = parts[0]; // First part is degree
+                // Extract duration from remaining parts
+                const durationMatch = trimmed.match(/(\d{4}\s*[-–—]\s*(?:\d{4}|Present|Current))/i);
+                if (durationMatch && !duration) {
+                  duration = durationMatch[1];
+                }
+              } else {
               degree = trimmed;
+              }
+              return; // Skip further processing for degree line
+            }
+            
+            // Check for duration on standalone line (only if not already found in degree line)
+            if (!duration && /(\d{4}\s*[-–—]\s*\d{4}|\d{4}\s*[-–—]\s*Present|\d{4}\s*[-–—]\s*Current)/i.test(trimmed)) {
+              duration = trimmed.replace(/.*?(\d{4}\s*[-–—]\s*(?:\d{4}|Present|Current)).*/i, '$1');
+              return; // Skip further processing for duration line
             }
             
             // Check for university (long names with University/College/Institute, or if no other match)
@@ -5098,39 +5522,54 @@ if (step === 'analyzing') {
             }
           }
           
+          // Render education entry - handle different layouts generically
           return (
             <div key={`edu-entry-${entryIdx}`} style={{ marginTop: entryIdx > 0 ? sectionSpacing : '0', marginBottom: textMargin }}>
-              {/* First line: University (bold, left) | CGPA (regular, right) */}
+              {/* First line: University (bold) - only show if university exists */}
+              {university && (
               <div style={{ 
                 fontSize: '10pt', 
                 fontWeight: 700, 
                 color: '#000000', 
-                marginBottom: '0.1rem', 
+                  marginBottom: (degree || duration || cgpa) ? '0.1rem' : '0', 
                 lineHeight: smallLineHeight, 
-                fontFamily: 'Helvetica, Arial, sans-serif',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start'
+                  fontFamily: 'Helvetica, Arial, sans-serif'
               }}>
-                <span>{university || ''}</span>
-                {cgpa && <span style={{ fontWeight: 400 }}>{cgpa}</span>}
+                  {university}
               </div>
+              )}
               
-              {/* Second line: Degree (regular, left) | Duration (regular, right) */}
+              {/* Second line: Degree (regular, left) | Duration (regular, right) - only show if degree exists */}
+              {degree && (
               <div style={{ 
                 fontSize: '10pt', 
                 fontWeight: 400, 
                 color: '#000000', 
-                marginBottom: '0.1rem', 
+                  marginBottom: (duration && duration !== degree) || cgpa ? '0.1rem' : '0', 
                 lineHeight: smallLineHeight, 
                 fontFamily: 'Helvetica, Arial, sans-serif',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'flex-start'
               }}>
-                <span>{degree || ''}</span>
-                {duration && <span>{duration}</span>}
+                  <span style={{ flex: 1 }}>{degree}</span>
+                  {duration && duration !== degree && <span style={{ whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>{duration}</span>}
               </div>
+              )}
+              
+              {/* Third line: CGPA (if exists and not already shown) */}
+              {cgpa && (
+                <div style={{ 
+                  fontSize: '10pt', 
+                  fontWeight: 400, 
+                  color: '#000000', 
+                  marginBottom: '0', 
+                  lineHeight: smallLineHeight, 
+                  fontFamily: 'Helvetica, Arial, sans-serif'
+                }}>
+                  {cgpa}
+                </div>
+              )}
             </div>
           );
         });
@@ -5161,7 +5600,7 @@ if (step === 'analyzing') {
                                /Email|Phone|Mob|Mobile|Contact/i.test(trimmed) ||
                                /\d{10}/.test(trimmed));
         
-        // Check for project title - format: "Project Name | Technology | URL" or standalone project name
+        // Check for project title - format: "Project Name | Technology | GitHub" or standalone project name
         // Project title is usually: not a bullet, not technologies line, contains URL or pipe separators
         const hasUrl = /https?:\/\/[^\s]+/i.test(trimmed);
         const hasPipeSeparators = trimmed.includes('|') && trimmed.split('|').length >= 2;
@@ -5169,6 +5608,7 @@ if (step === 'analyzing') {
                                !isBullet && 
                                !trimmed.toLowerCase().startsWith('technologies:') &&
                                !trimmed.toLowerCase().startsWith('certificate link:') &&
+                               !/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|October|November|December|January|February|March|April|June|July|August|September|Oct|Nov|Dec)[a-z]* \d{4}$/i.test(trimmed) && // Not a date line
                                (trimmed.includes('[') || 
                                 hasUrl ||
                                 (hasPipeSeparators && trimmed.length > 10 && trimmed.length < 150) ||
@@ -5176,13 +5616,19 @@ if (step === 'analyzing') {
                                  !trimmed.includes(':') && 
                                  !trimmed.match(/^\d+[.)]/)));
         
+        // Check for project date - format: "Sept 2025", "Aug 2025", "September 2025", etc. (comes after project title)
+        const isProjectDate = sectionType === 'projects' && 
+                              !isBullet && 
+                              !isProjectTitle &&
+                              /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|October|November|December|January|February|March|April|June|July|August|September|Oct|Nov|Dec)[a-z]* \d{4}$/i.test(trimmed);
+        
         // Check for Technologies line in projects section
         const isTechnologiesLine = sectionType === 'projects' && 
                                     /^Technologies:\s*/i.test(trimmed);
         
-        // Check for certificate link line
+        // Check for certificate link line (with or without colon)
         const isCertificateLinkLine = sectionType === 'certifications' && 
-                                      /^Certificate Link:\s*/i.test(trimmed);
+                                      /^Certificate Link:?\s*$/i.test(trimmed);
         
         // Check for certification entry - format: "Title | Organization | Year" or "Organization"
         const isCertificationEntry = sectionType === 'certifications' && 
@@ -5203,11 +5649,13 @@ if (step === 'analyzing') {
           formattedLines.push({ type: 'degree', content: trimmed, key: `degree-${idx}` });
         } else if (isProjectTitle) {
           formattedLines.push({ type: 'project-title', content: trimmed, key: `project-${idx}` });
+        } else if (isProjectDate) {
+          formattedLines.push({ type: 'project-date', content: trimmed, key: `project-date-${idx}` });
         } else if (isTechnologiesLine) {
           const techContent = trimmed.replace(/^Technologies:\s*/i, '');
           formattedLines.push({ type: 'technologies', content: techContent, key: `tech-${idx}` });
         } else if (isCertificateLinkLine) {
-          const linkContent = trimmed.replace(/^Certificate Link:\s*/i, '');
+          const linkContent = trimmed.replace(/^Certificate Link:?\s*/i, '').trim();
           formattedLines.push({ type: 'certificate-link', content: linkContent, key: `cert-link-${idx}` });
         } else if (isCertificationEntry) {
           formattedLines.push({ type: 'certification-entry', content: trimmed, key: `cert-${idx}` });
@@ -5269,11 +5717,20 @@ if (step === 'analyzing') {
             );
           
           case 'project-title':
-            // Parse project title format: "Project Name | Technology | URL" or "Project Name | URL"
+            // Parse project title format: "Project Name | Technology | GitHub" or "Project Name | Technology"
             const projectParts = item.content.split('|').map(p => p.trim());
             let projectName = '';
             let projectTech = '';
             let projectUrl = '';
+            let hasGitHubText = false;
+            
+            // Check if any part contains "GitHub" or "Github" text
+            const githubTextIndex = projectParts.findIndex(part => /github/i.test(part));
+            if (githubTextIndex !== -1) {
+              hasGitHubText = true;
+              // Remove GitHub text from parts
+              projectParts.splice(githubTextIndex, 1);
+            }
             
             // Extract URL (usually the last part that starts with http)
             const urlIndex = projectParts.findIndex(part => /^https?:\/\//i.test(part));
@@ -5290,29 +5747,39 @@ if (step === 'analyzing') {
               }
             } else {
               // Fallback: if no pipe separators, use whole content
-              projectName = item.content.replace(/\[CN Project\]/g, '').trim();
+              projectName = item.content.replace(/\[CN Project\]/g, '').replace(/github/gi, '').trim();
             }
             
+            // Check if this is a Coding Ninjas project (projects with logo don't have links)
             // Get projects_added from analysisData
             const projectsAdded = analysisData?.improved?.projects_added || [];
             
-            // Check if this project matches any project in projects_added
+            // Check if this project matches any project in projects_added (exact match only)
             const isAddedProject = projectsAdded.some(addedProject => {
               const normalizedAdded = addedProject.toLowerCase().trim();
               const normalizedTitle = projectName.toLowerCase().trim();
-              return normalizedTitle === normalizedAdded || 
-                     normalizedTitle.includes(normalizedAdded) ||
-                     normalizedAdded.includes(normalizedTitle);
+              return normalizedTitle === normalizedAdded; // Exact match only
             });
+            
+            // Find project-specific GitHub link based on project name (only if NOT a Coding Ninjas project)
+            if (!isAddedProject && (hasGitHubText || !projectUrl) && projectName && extractedLinks) {
+              const projectSpecificUrl = findProjectGitHubLink(projectName, extractedLinks);
+              if (projectSpecificUrl) {
+                projectUrl = projectSpecificUrl;
+                hasGitHubText = true; // Ensure we show the link
+              }
+            }
             
             return (
               <div key={item.key} style={{ fontSize: '10pt', fontWeight: 700, color: '#000000', marginTop: sectionSpacing, marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
                 <span>
                   {projectName}
                   {projectTech && <span style={{ fontWeight: 400, color: '#4b5563' }}> | {projectTech}</span>}
-                  {projectUrl && (
+                  {/* Only show GitHub link if NOT a Coding Ninjas project */}
+                  {!isAddedProject && (projectUrl || hasGitHubText) && (
                     <>
                       {(projectName || projectTech) && <span style={{ fontWeight: 400, color: '#4b5563' }}> | </span>}
+                      {projectUrl ? (
                       <a 
                         href={projectUrl} 
                         target="_blank" 
@@ -5321,10 +5788,15 @@ if (step === 'analyzing') {
                       >
                         GitHub
                       </a>
+                      ) : (
+                        <span style={{ fontWeight: 400, color: '#4b5563' }}>GitHub</span>
+                      )}
                     </>
                   )}
                 </span>
                 {isAddedProject && (
+                  <>
+                    <span style={{ fontWeight: 400, color: '#4b5563' }}> | </span>
                           <img 
                             src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTEMYetPQ2J3r1xQQ36xkvL0HRXp7p_YH4mgA&s" 
                             alt="Coding Ninjas" 
@@ -5335,7 +5807,15 @@ if (step === 'analyzing') {
                               display: 'inline-block'
                             }} 
                           />
+                  </>
                 )}
+              </div>
+            );
+          
+          case 'project-date':
+            return (
+              <div key={item.key} style={{ fontSize: '9pt', color: '#000000', marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
+                {item.content}
               </div>
             );
           
@@ -5347,13 +5827,113 @@ if (step === 'analyzing') {
             );
           
           case 'certificate-link':
-            // Extract URL from the link content
+            // Extract URL from the link content or try to find from extractedLinks
+            let certUrl = null;
             const certUrlMatch = item.content.match(/https?:\/\/[^\s]+/i);
-            const certUrl = certUrlMatch ? certUrlMatch[0] : item.content.trim();
+            if (certUrlMatch) {
+              certUrl = certUrlMatch[0];
+            } else {
+              // Try to find certificate link from extractedLinks
+              // First, look for exact text match "Certificate Link" or similar
+              if (extractedLinks && extractedLinks.length > 0) {
+                // Look for links with "Certificate Link" text (exact match)
+                for (const link of extractedLinks) {
+                  if (!link.url || !link.text) continue;
+                  const linkText = link.text.toLowerCase().trim();
+                  const url = link.url.toLowerCase();
+                  
+                  // Skip known social/professional platforms
+                  if (url.includes('linkedin.com') || url.includes('github.com') || 
+                      url.includes('kaggle.com') || url.includes('twitter.com') ||
+                      url.includes('facebook.com') || url.includes('instagram.com')) {
+                    continue;
+                  }
+                  
+                  // Check for exact match: link text is exactly "certificate link" (most reliable)
+                  if (linkText === 'certificate link' || linkText.includes('certificate link')) {
+                    certUrl = link.url;
+                    break;
+                  }
+                }
+                
+                // If no exact match found, try other methods
+                if (!certUrl) {
+                  for (const link of extractedLinks) {
+                    if (!link.url || !link.text) continue;
+                    const linkText = link.text.toLowerCase().trim();
+                    const url = link.url.toLowerCase();
+                    
+                    // Skip known social/professional platforms
+                    if (url.includes('linkedin.com') || url.includes('github.com') || 
+                        url.includes('kaggle.com') || url.includes('twitter.com') ||
+                        url.includes('facebook.com') || url.includes('instagram.com')) {
+                      continue;
+                    }
+                    
+                    // Check for certificate-related keywords
+                    const hasCertKeywords = linkText.includes('certificate') || linkText.includes('certification') ||
+                                           linkText.includes('cert') || linkText.includes('credential') ||
+                                           linkText.includes('badge') || linkText.includes('verify');
+                    
+                    // Check if URL looks like a certificate/credential URL
+                    const looksLikeCertUrl = url.includes('certificate') || url.includes('credential') ||
+                                            url.includes('verify') || url.includes('badge') ||
+                                            url.includes('coursera.org') || url.includes('udemy.com') ||
+                                            url.includes('edx.org') || url.includes('coursera') ||
+                                            url.match(/\/certificate|\/cert|\/verify|\/badge/i);
+                    
+                    // Also check for common certificate hosting platforms
+                    const isCertHostingPlatform = url.includes('drive.google.com') || 
+                                                 url.includes('dropbox.com') ||
+                                                 url.includes('onedrive.com') ||
+                                                 url.includes('credly.com') ||
+                                                 url.includes('accredible.com');
+                    
+                    if ((hasCertKeywords && !url.includes('github') && !url.includes('linkedin')) || 
+                        looksLikeCertUrl || (isCertHostingPlatform && hasCertKeywords)) {
+                      certUrl = link.url;
+                      break;
+                    }
+                  }
+                }
+              }
+              
+              // Fallback: try generic portfolio link matching
+              if (!certUrl && extractedLinks && extractedLinks.length > 0) {
+                // Try to find any non-social media link that might be a certificate
+                for (const link of extractedLinks) {
+                  if (!link.url || !link.text) continue;
+                  const url = link.url.toLowerCase();
+                  
+                  // Skip social media
+                  if (url.includes('linkedin.com') || url.includes('github.com') || 
+                      url.includes('kaggle.com') || url.includes('twitter.com')) {
+                    continue;
+                  }
+                  
+                  // If it's a Google Drive or similar file hosting link, it might be a certificate
+                  if (url.includes('drive.google.com') || url.includes('dropbox.com') || 
+                      url.includes('onedrive.com')) {
+                    certUrl = link.url;
+                    break;
+                  }
+                }
+              }
+              
+              // Last resort: if there's text content that looks like a URL, use it
+              if (!certUrl && item.content.trim()) {
+                const trimmedContent = item.content.trim();
+                // Check if it looks like a domain name
+                if (trimmedContent.match(/^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.[a-zA-Z]{2,}/)) {
+                  certUrl = trimmedContent.startsWith('http') ? trimmedContent : `https://${trimmedContent}`;
+                }
+              }
+            }
             
             return (
               <div key={item.key} style={{ fontSize: '10pt', color: '#000000', marginBottom: '0.1rem', lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
                 <span style={{ fontWeight: 700 }}>Certificate Link:</span>{' '}
+                {certUrl ? (
                 <a 
                   href={certUrl} 
                   target="_blank" 
@@ -5362,6 +5942,9 @@ if (step === 'analyzing') {
                 >
                   View Certificate
                 </a>
+                ) : (
+                  <span style={{ color: '#6b7280', fontStyle: 'italic' }}>Link not available</span>
+                )}
               </div>
             );
           
@@ -5406,10 +5989,36 @@ if (step === 'analyzing') {
             );
           
           case 'bullet':
+            // Parse markdown bold (**text**) for skills and other sections
+            const parseMarkdownBold = (text) => {
+              if (!text) return text;
+              const parts = [];
+              let lastIndex = 0;
+              const regex = /\*\*(.*?)\*\*/g;
+              let match;
+              
+              while ((match = regex.exec(text)) !== null) {
+                // Add text before the bold
+                if (match.index > lastIndex) {
+                  parts.push(text.substring(lastIndex, match.index));
+                }
+                // Add bold text
+                parts.push(<strong key={match.index}>{match[1]}</strong>);
+                lastIndex = regex.lastIndex;
+              }
+              
+              // Add remaining text
+              if (lastIndex < text.length) {
+                parts.push(text.substring(lastIndex));
+              }
+              
+              return parts.length > 0 ? parts : text;
+            };
+            
             return (
               <div key={item.key} style={{ paddingLeft: '0.4rem', marginBottom: bulletMargin, color: '#000000', fontSize: '10pt', lineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
                 <span style={{ marginRight: '0.3rem' }}>-</span>
-                <span>{item.content}</span>
+                <span>{parseMarkdownBold(item.content)}</span>
               </div>
             );
           
@@ -5483,10 +6092,8 @@ if (step === 'analyzing') {
           >
             {sortedSections.map((section, sectionIdx) => {
               const isHeaderSection = section.type === 'header';
-              console.log('🔵 renderResumeWithTemplate - section:', section.name, 'type:', section.type, 'isHeaderSection:', isHeaderSection);
               
               if (isHeaderSection) {
-                console.log('🟡 renderResumeWithTemplate - Rendering HEADER section!');
                 return (
                   <div key={sectionIdx} style={{ marginBottom: '0.8rem' }}>
                     {formatSectionContent(section.content, section.type, true, true, extractedLinks)}
@@ -5676,35 +6283,7 @@ if (step === 'analyzing') {
     return skillIconMap[normalizedSkill] || null;
   };
 
-  const gapVisualPalettes = [
-    {
-      gapBg: 'linear-gradient(135deg, #fffafb, #fff5f2)',
-      gapBorder: '#ffe4d6',
-      moduleBg: 'linear-gradient(135deg, #f8f9ff, #eef2ff)',
-      moduleBorder: '#dee3ff',
-      glow: 'rgba(251, 146, 60, 0.12)',
-      accent: '#c26c37'
-    },
-    {
-      gapBg: 'linear-gradient(135deg, #fffef5, #fcf9e6)',
-      gapBorder: '#f5ecc6',
-      moduleBg: 'linear-gradient(135deg, #f2fbff, #e8f6ff)',
-      moduleBorder: '#d3ecff',
-      glow: 'rgba(37, 99, 235, 0.12)',
-      accent: '#3a6fd8'
-    },
-    {
-      gapBg: 'linear-gradient(135deg, #f5fff4, #eefcf5)',
-      gapBorder: '#dff7e3',
-      moduleBg: 'linear-gradient(135deg, #f7f1ff, #efe8ff)',
-      moduleBorder: '#e1d8ff',
-      glow: 'rgba(147, 51, 234, 0.12)',
-      accent: '#3d7f5c'
-    }
-  ];
-
   const jobStats = analysisData?.market_stats || {};
-  const jobsAnalyzed = jobStats.jobs_analyzed || 0;
   const topMarketSkills = jobStats.top_skills || [];
   const totalMarketSkills = topMarketSkills.length;
   const addedSkillsList = analysisData?.improved?.skills_added || [];
@@ -5725,26 +6304,7 @@ if (step === 'analyzing') {
     
     return false;
   };
-  
-  // Count how many of the top market skills are missing (using matching logic)
-  const originalSkills = analysisData?.original?.has_skills || [];
-  const missingTopMarketSkillsCount = topMarketSkills.filter(({ skill }) => {
-    return !originalSkills.some(origSkill => skillMatches(origSkill, skill));
-  }).length;
-  
-  // Find which top market skills are missing (for matching with added skills)
-  const missingTopMarketSkills = topMarketSkills.filter(({ skill }) => {
-    return !originalSkills.some(origSkill => skillMatches(origSkill, skill));
-  });
-  
-  // Find which added skills address the MISSING TOP MARKET SKILLS (not all missing_critical_skills)
-  const addedToCoverMarketNeeds = addedSkillsList.filter((skill) => {
-    return missingTopMarketSkills.some(({ skill: marketSkill }) => 
-      skillMatches(skill, marketSkill)
-    );
-  });
 
-  const modulesAddressingGaps = analysisData?.learning_comparison?.cn_course_learning?.modules_addressing_gaps || [];
   const curriculumModulesUsed = analysisData?.curriculum_used || [];
 
     return (
@@ -5755,7 +6315,7 @@ if (step === 'analyzing') {
           rel="stylesheet"
         />
         {/* Header */}
-        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1rem' }}>
+        <div style={{ maxWidth: "1366px", margin: "0 auto", padding: "2rem 1rem" }}>
           <header style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -5819,32 +6379,32 @@ if (step === 'analyzing') {
             display: 'flex', 
             flexDirection: 'column', 
             alignItems: 'center', 
-            padding: '3rem 0',
+            padding: '1.5rem 0',
             backgroundColor: '#FEF4F1',
           }}>
             {/* Large Main Score - Job Match Score */}
-            <div style={{ position: 'relative', width: '200px', height: '200px', marginBottom: '2rem' }}>
-              <svg width="200" height="200" style={{ transform: 'rotate(-90deg)' }}>
+            <div style={{ position: 'relative', width: '150px', height: '150px', marginBottom: '1.5rem' }}>
+              <svg width="150" height="150" style={{ transform: 'rotate(-90deg)' }}>
                 {/* Background circle */}
                 <circle
-                  cx="100"
-                  cy="100"
-                  r="85"
+                  cx="75"
+                  cy="75"
+                  r="64"
                   fill="none"
                   stroke="#E5E7EB"
-                  strokeWidth="12"
+                  strokeWidth="10"
                 />
                 {/* Progress circle - Orange */}
                 <circle
-                  cx="100"
-                  cy="100"
-                  r="85"
+                  cx="75"
+                  cy="75"
+                  r="64"
                   fill="none"
                   stroke="#FF6B35"
-                  strokeWidth="12"
+                  strokeWidth="10"
                   strokeLinecap="round"
-                  strokeDasharray={`${2 * Math.PI * 85}`}
-                  strokeDashoffset={`${2 * Math.PI * 85 * (1 - (analysisData?.improved?.job_relevance_score || 78) / 100)}`}
+                  strokeDasharray={`${2 * Math.PI * 64}`}
+                  strokeDashoffset={`${2 * Math.PI * 64 * (1 - (analysisData?.original?.job_relevance_score) / 100)}`}
                   style={{ transition: 'stroke-dashoffset 0.5s ease' }}
                 />
               </svg>
@@ -5855,8 +6415,8 @@ if (step === 'analyzing') {
                 transform: 'translate(-50%, -50%)',
                 textAlign: 'center'
               }}>
-                <div style={{ fontSize: '3rem', fontWeight: 800, color: 'black', lineHeight: 1 , fontFamily: "Archivo" }}>
-                  {analysisData?.improved?.job_relevance_score || analysisData?.original?.job_relevance_score || 78}%
+                <div style={{ fontSize: '2.25rem', fontWeight: 800, color: 'black', lineHeight: 1 , fontFamily: "Archivo" }}>
+                  {analysisData?.original?.job_relevance_score}%
                 </div>
               </div>
             </div>
@@ -5898,7 +6458,7 @@ if (step === 'analyzing') {
               display: 'grid', 
               gridTemplateColumns: 'repeat(4, 1fr)', 
               gap: '1.5rem', 
-              marginTop: '2rem',
+              marginTop: '1.5rem',
               width: '100%',
               maxWidth: '800px'
             }}>
@@ -5926,26 +6486,26 @@ if (step === 'analyzing') {
             ].map((stat, idx) => (
                 <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   {/* Circular Progress Indicator */}
-                  <div style={{ position: 'relative', width: '100px', height: '100px', marginBottom: '0.5rem' }}>
-                    <svg width="100" height="100" style={{ transform: 'rotate(-90deg)' }}>
+                  <div style={{ position: 'relative', width: '120px', height: '120px', marginBottom: '0.5rem' }}>
+                    <svg width="120" height="120" style={{ transform: 'rotate(-90deg)' }}>
                       <circle
-                        cx="50"
-                        cy="50"
-                        r="40"
+                        cx="60"
+                        cy="60"
+                        r="48"
                         fill="none"
                         stroke="#E5E7EB"
                         strokeWidth="8"
                       />
                       <circle
-                        cx="50"
-                        cy="50"
-                        r="40"
+                        cx="60"
+                        cy="60"
+                        r="48"
                         fill="none"
                         stroke={stat.color}
                         strokeWidth="8"
                         strokeLinecap="round"
-                        strokeDasharray={`${2 * Math.PI * 40}`}
-                        strokeDashoffset={`${2 * Math.PI * 40 * (1 - stat.value / 100)}`}
+                        strokeDasharray={`${2 * Math.PI * 48}`}
+                        strokeDashoffset={`${2 * Math.PI * 48 * (1 - stat.value / 100)}`}
                         style={{ transition: 'stroke-dashoffset 0.5s ease' }}
                       />
                     </svg>
@@ -5956,7 +6516,7 @@ if (step === 'analyzing') {
                       transform: 'translate(-50%, -50%)',
                       textAlign: 'center'
                     }}>
-                      <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', lineHeight: 1, fontFamily: "Archivo" }}>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', lineHeight: 1, fontFamily: "Archivo" }}>
                         {stat.value}%
                       </div>
                     </div>
@@ -5980,80 +6540,88 @@ if (step === 'analyzing') {
             formatResumeText={formatResumeText}
           />
 
-          {/* Improvements Summary */}
-          <div style={{ marginTop: '2rem', background: 'white', borderRadius: '12px', padding: '2rem', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  <div>
-                  <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem', color: '#0f172a' }}>What Changed?</h2>
-                  <p style={{ margin: 0, color: '#64748b', fontSize: '0.875rem' }}>
-                    We scanned {jobsAnalyzed || '—'} data-analytics job postings to decide which additions matter most.
-                  </p>
+          {/* Boost Match Score & Recommendations Section */}
+          <div style={{ marginTop: '2rem'}}>
+            {/* Boost Match Score Card */}
+            <div style={{ 
+              background: 'white', 
+              borderRadius: '12px', 
+              padding: '2rem', 
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)', 
+              border: '1px solid #e2e8f0',
+              marginBottom: '2rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.8rem'
+            }}>
+              <h3 style={{ fontSize: '1.5rem', fontFamily: 'Archivo', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+                Boost Your Match Score!
+              </h3>
+              
+              <p style={{ color: '#64748b', marginBottom: '1rem', fontSize: '1rem', fontFamily: 'Inter' }}>
+                Our analysis shows you're missing key skills like{' '}
+                <span style={{ color: '#f97316', fontWeight: 500 }}>
+                  {Array.isArray(analysisData?.improved?.skills_added) && analysisData.improved.skills_added.length > 0
+                    ? analysisData.improved.skills_added.join(', ')
+                    : 'Data Visualization, Machine Learning Algorithms, Big Data Tools'}
+                </span>
+                .
+              </p>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <span style={{ color: '#0f172a', fontFamily: 'Archivo', fontWeight: 600 }}>
+                  Potential Job Match:
+                </span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 700 }}>
+                  <span style={{ color: '#F66C3B',fontFamily: 'Archivo' }}>
+                    {(analysisData?.original?.job_relevance_score ?? 0)}%
+                  </span>
+                  <span style={{ color: 'black', margin: '0 0.5rem' }}>→</span>
+                  <span style={{ color: '#F66C3B',fontFamily: 'Archivo' }}>
+                    {(analysisData?.improved?.job_relevance_score ?? analysisData?.original?.job_relevance_score ?? 0)}%
+                  </span>
+                </span>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontFamily: 'Inter' }}>
+                  <GraduationCap style={{ width: '20px', height: '20px' }} />
+                  <span style={{ fontFamily: 'Inter',color: '#565D6D' }}>Explore recommended courses to bridge these gaps.</span>
                 </div>
+                <button style={{
+                  background: '#F66C3B',
+                  color: 'white',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  fontWeight: 'bolder',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s',
+                  fontFamily: 'Inter'
+                }}
+                onMouseEnter={(e) => e.target.style.background = '#ea580c'}
+                onMouseLeave={(e) => e.target.style.background = '#F66C3B'}>
+                  Request Callback
+                </button>
+              </div>
+            </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
-                  {[
-                    {
-                      icon: TrendingUp,
-                      label: 'Most demanded skills',
-                      value: totalMarketSkills || '—',
-                      detail: totalMarketSkills ? 'Skills that kept showing up' : 'No market data available'
-                    },
-                    {
-                      icon: AlertCircle,
-                      label: 'Missing in your resume',
-                      value: missingTopMarketSkillsCount,
-                      detail: missingTopMarketSkillsCount === 0 ? 'You had every top skill' : 'We highlighted these gaps'
-                    },
-                    {
-                      icon: CheckCircle,
-                      label: 'Skills we added',
-                      value: addedSkillsList.length,
-                      detail: addedSkillsList.length ? `${addedToCoverMarketNeeds.length} address missing top skills` : 'All critical skills were already present'
-                    },
-                    {
-                      icon: Zap,
-                      label: 'Skills enhanced',
-                      value: analysisData?.improved?.skills_enhanced?.length || 0,
-                      detail: analysisData?.improved?.skills_enhanced?.length ? 'Existing skills upgraded with advanced features' : 'No skills were enhanced'
-                    }
-                  ].map((card, idx) => (
-                    <div key={idx} style={{ 
-                      background: '#f8fafc', 
-                      border: '1px solid #e2e8f0', 
-                      borderRadius: '8px', 
+            {/* Most demanded skills in those jobs */}
+            {totalMarketSkills > 0 && (
+              <div style={{ 
+                marginTop: '2rem',
+                      background: 'white',
                       padding: '1rem', 
+                marginLeft: '1rem',
                       display: 'flex', 
-                      gap: '1rem', 
-                      alignItems: 'center'
-                    }}>
-                      <div style={{ 
-                        background: 'rgba(99, 102, 241, 0.1)', 
-                        padding: '0.75rem', 
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <card.icon style={{ width: '32px', height: '32px', color: '#6366F1' }} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '2.25rem', fontWeight: 700, color: '#0f172a', lineHeight: 1 }}>{card.value}</div>
-                        <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#475569', marginTop: '0.25rem' }}>{card.label}</div>
-                        <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#64748b' }}>{card.detail}</p>
-                      </div>
-                    </div>
-                      ))}
-                    </div>
-
-                {totalMarketSkills > 0 && (
-                  <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1.5rem' }}>
+                flexDirection: 'column', 
+                gap: '1.5rem'
+              }}>
+                <div style={{ paddingTop: '0' }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                       <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: '#0f172a' }}>
-                        Most demanded skills in those jobs
+                        Most Demanded Skills
                       </h3>
-                      <span style={{ fontSize: '0.875rem', color: '#6366F1', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        {missingTopMarketSkillsCount} missing → {addedToCoverMarketNeeds.length} added
-                        <span style={{ fontSize: '1rem' }}>→</span>
-                      </span>
                   </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
                       {topMarketSkills.map((skill, idx) => {
@@ -6126,216 +6694,383 @@ if (step === 'analyzing') {
                           </div>
                         );
                       })}
+                  </div>
                     </div>
                   </div>
                 )}
 
-                <div style={{ borderTop: '1px solid #e2e8f0', marginTop: '1.5rem', paddingTop: '1.5rem' }}>
-                  {/* Skills Added Section */}
-                  {analysisData.improved.skills_enhanced?.length > 0 && (
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <h3 style={{ 
-                      fontSize: '1rem', 
-                      fontWeight: 600, 
-                      marginBottom: '1rem', 
-                      color: '#0f172a', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '0.5rem' 
-                    }}>
-                      <TrendingUp style={{ width: '20px', height: '20px', color: '#f59e0b' }} />
-                      Skills Enhanced
+          {/* Skill Gaps Section */}
+          <div style={{ background: 'white', padding: '0rem 2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: '#111827', marginBottom: '0.5rem' }}>
+              Detailed Insights & Next Steps
+            </h2>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
+                Your Skill Gaps Prioritized
                     </h3>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-                      {analysisData.improved.skills_enhanced.map((skill, idx) => (
-                        <div key={idx} style={{
-                          border: '1px solid #fef3c7',
-                          borderRadius: '8px',
-                          padding: '0.75rem',
-                          display: 'flex',
-                          gap: '0.75rem',
-                          alignItems: 'center',
-                          background: '#fffbeb'
-                        }}>
-                          <TrendingUp style={{ width: '24px', height: '24px', color: '#f59e0b' }} />
-                          <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#92400e' }}>{skill}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                </div>
 
-                {/* Skills Added Section (completely new) */}
-                {analysisData.improved.skills_added?.length > 0 && (
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <h3 style={{ 
-                      fontSize: '1rem', 
-                      fontWeight: 600, 
-                      marginBottom: '1rem', 
-                      color: '#0f172a', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '0.5rem' 
-                    }}>
-                      <CheckCircle style={{ width: '20px', height: '20px', color: '#10b981' }} />
-                      Skills Added
-                    </h3>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-                      {analysisData.improved.skills_added.map((skill, idx) => {
-                        const icon = getSkillIcon(skill);
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {(() => {
+                // Combine skills_added and skills_enhanced with their status
+                const skillsAdded = (analysisData?.improved?.skills_added || []).map(skill => ({
+                  name: skill,
+                  status: 'Added',
+                  statusColor: '#dc2626',
+                  statusBg: '#fef2f2'
+                }));
+                
+                const skillsEnhanced = (analysisData?.improved?.skills_enhanced || []).map(skill => ({
+                  name: skill,
+                  status: 'Enhanced',
+                  statusColor: '#ea580c',
+                  statusBg: '#fff7ed'
+                }));
+                
+                const allSkills = [...skillsAdded, ...skillsEnhanced];
+                
+                return allSkills.map((skill, index) => {
+                  const skillIcon = getSkillIcon(skill.name);
+                  const defaultIcon = (
+                    <svg style={{ width: '20px', height: '20px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  );
+
                         return (
-                          <div key={idx} style={{
-                            border: '1px solid #d1fae5',
-                            borderRadius: '8px',
-                            padding: '0.75rem',
+                    <div
+                      key={index}
+                      style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '1rem',
+                            border: '1px solid #e2e8f0', 
+                            borderRadius: '8px', 
+                        background: '#f8fafc',
+                        transition: 'border-color 0.2s',
+                        cursor: 'pointer'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#cbd5e1';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#e2e8f0';
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{ color: '#64748b', display: 'flex', alignItems: 'center' }}>
+                          {skillIcon ? (
+                            <img 
+                              src={skillIcon} 
+                              alt={`${skill.name} icon`} 
+                              style={{ width: '20px', height: '20px', objectFit: 'contain' }} 
+                            />
+                          ) : (
+                            defaultIcon
+                          )}
+                        </div>
+                        <span style={{ fontSize: '0.875rem', color: '#0f172a', fontWeight: 500 }}>
+                          {skill.name}
+                              </span>
+                    </div>
+                      
+                              <span style={{ 
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '6px',
+                                fontSize: '0.75rem', 
+                      fontWeight: 600, 
+                        color: skill.statusColor,
+                        background: skill.statusBg
+                              }}>
+                        {skill.status}
+                              </span>
+                    </div>
+                        );
+                });
+              })()}
+                    </div>
+
+            {/* Projects Added Section */}
+            {analysisData?.improved?.projects_added?.length > 0 && (
+              <>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', marginTop: '1rem' }}>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
+                    Projects Added
+                    </h3>
+                  </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {analysisData.improved.projects_added.map((project, idx) => {
+                        return (
+                      <div
+                        key={idx}
+                        style={{
                             display: 'flex',
-                            gap: '0.75rem',
                             alignItems: 'center',
-                            background: '#ecfdf5'
-                          }}>
-                            {icon ? (
-                              <img src={icon} alt={`${skill} icon`} style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
-                            ) : (
-                              <CheckCircle style={{ width: '24px', height: '24px', color: '#10b981' }} />
-                            )}
-                            <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#065f46' }}>{skill}</span>
+                          justifyContent: 'space-between',
+                          padding: '1rem',
+                            border: '1px solid #e2e8f0', 
+                            borderRadius: '8px', 
+                          background: '#f8fafc',
+                          transition: 'border-color 0.2s',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = '#cbd5e1';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#e2e8f0';
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div style={{ color: '#64748b', display: 'flex', alignItems: 'center' }}>
+                            <Briefcase style={{ width: '20px', height: '20px' }} />
+                            </div>
+                          <span style={{ fontSize: '0.875rem', color: '#0f172a', fontWeight: 500 }}>
+                            {project}
+                              </span>
+                        </div>
+                        
+                              <span style={{ 
+                          padding: '0.25rem 0.75rem',
+                          borderRadius: '6px',
+                                fontSize: '0.75rem', 
+                          fontWeight: 600,
+                          color: '#1e40af',
+                          background: '#dbeafe'
+                              }}>
+                          Added
+                              </span>
                           </div>
                         );
                       })}
                     </div>
-                  </div>
+              </>
                 )}
-                  {/* Projects Added Section */}
-                  <div>
-                    <h3 style={{ 
-                      fontSize: '1rem', 
-                      fontWeight: 600, 
-                      marginBottom: '1rem', 
-                      color: '#0f172a', 
+                  </div>
+
+            {/* Recommended Learning Modules */}
+            <div style={{ 
+              padding: '2rem', 
+                      display: 'flex', 
+              flexDirection: 'column',
+              gap: '1.5rem'
+                    }}>
+              <h3 style={{ fontSize: '1.5rem', fontFamily: 'Archivo', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+                Recommended Learning Modules
+                    </h3>
+              
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+                gap: '1.5rem' 
+              }}>
+                {(curriculumModulesUsed && curriculumModulesUsed.length > 0
+                  ? curriculumModulesUsed
+                  : [
+                      { module: "Power BI Basics" },
+                      { module: "Advanced SQL for Data Analysis" },
+                      { module: "Python for Data Science" },
+                      { module: "Tableau Data Visualization" }
+                    ]
+                ).map((course, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      background: 'white',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                      transition: 'box-shadow 0.2s',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.15)'}
+                    onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)'}
+                  >
+                    <div style={{
+                      height: '192px',
+                      background: 'linear-gradient(135deg, #1e293b, #0f172a)',
                       display: 'flex', 
                       alignItems: 'center', 
-                      gap: '0.5rem' 
+                      justifyContent: 'center',
+                      fontSize: '3rem'
                     }}>
-                      <Briefcase style={{ width: '20px', height: '20px', color: '#6366F1' }} />
-                      Projects Added
+                      {"📊"}
+                    </div>
+                    
+                    <div style={{ padding: '1.5rem' }}>
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.75rem' }}>
+                        {course.module}
                     </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
-                      {analysisData.improved.projects_added.map((project, idx) => (
-                        <div key={idx} style={{ 
-                          border: '1px solid #e2e8f0', 
+                      <p style={{ color: '#64748b', marginBottom: '1.5rem', fontSize: '0.875rem', lineHeight: '1.5' }}>
+                        {"Learn the exact skills employers look for in top data analytics roles."}
+                      </p>
+                      <button style={{
+                        width: '100%',
+                        background: '#f1f5f9',
+                        color: '#0f172a',
+                        padding: '0.75rem',
                           borderRadius: '8px', 
-                          padding: '1rem', 
-                          display: 'flex', 
-                          gap: '1rem', 
-                          alignItems: 'center', 
-                          background: '#f8fafc'
-                        }}>
-                          <div style={{ 
-                            background: 'rgba(99, 102, 241, 0.1)', 
-                            padding: '0.75rem', 
-                            borderRadius: '8px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            <Briefcase style={{ width: '20px', height: '20px', color: '#6366F1' }} />
-                          </div>
-                          <div>
-                            <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: '#0f172a' }}>{project}</p>
-                            <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#64748b' }}>Added to showcase experience</p>
-                          </div>
+                        fontWeight: 500,
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.target.style.background = '#e2e8f0'}
+                      onMouseLeave={(e) => e.target.style.background = '#f1f5f9'}>
+                        Learn More
+                      </button>
+                    </div>
                         </div>
                       ))}
                     </div>
                   </div>
+          </div>
+
+          {/* Recommended Learning Path Section */}
+          <div style={{ 
+            padding: '0rem 2rem', 
+                          display: 'flex', 
+            flexDirection: 'column',
+            gap: '1.5rem'
+                    }}>
+            <h3 style={{ fontSize: '1.5rem', fontFamily: 'Archivo', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+              Recommended Learning Path
+                    </h3>
+            
+            <div style={{
+                          borderRadius: '8px', 
+              border: '1px solid #e2e8f0',
+              padding: '1.5rem',
+                          background: '#f8fafc'
+                        }}>
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+                          <div style={{ 
+        background: '#fff7ed',
+                            padding: '0.75rem', 
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0
+                          }}>
+        <GraduationCap style={{ width: '24px', height: '24px', color: '#ea580c' }} />
+                          </div>
+      <div style={{ flex: 1, minWidth: '250px' }}>
+        <h2 style={{
+          fontSize: '1rem',
+          fontWeight: 600,
+          color: '#111827',
+          marginBottom: '0.5rem',
+          fontFamily: 'Archivo'
+        }}>
+          <a style={{ color: '#111827', textDecoration: 'none' }} href="https://www.codingninjas.com/brochure/cn-job-bootcamp-data-analytics-with-genai-brochure" target="_blank" rel="noopener noreferrer">Data Analytics Foundations Track</a>
+        </h2>
+        <p style={{
+          color: '#6b7280',
+          fontSize: '0.9rem',
+          lineHeight: '1.5',
+          margin: 0,
+          fontFamily: 'Inter'
+        }}>
+          Includes: Data Visualization with Power BI, Applied Machine Learning, Advanced SQL for Data Analysts
+        </p>
+                          </div>
+                        </div>
+    <hr style={{ border: '0.1px solid #DEE1E6' }} />
+    <br/>
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      flexWrap: 'wrap',
+      gap: '2rem'
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        color: '#374151'
+      }}>
+        <Clock style={{ width: '20px', height: '20px', color: '#6b7280' }} />
+        <span style={{ fontWeight: 500, fontSize: '0.9rem', fontFamily: 'Inter' }}>
+          Estimated Completion: 3-6 Weeks
+        </span>
+                    </div>
+      
+      <button style={{
+        background: '#f97316',
+        color: 'white',
+        fontWeight: 600,
+        padding: '0.75rem 1.5rem',
+        borderRadius: '6px',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '1rem',
+        transition: 'background-color 0.2s'
+      }}
+      onMouseEnter={(e) => {
+        e.target.style.background = '#ea580c';
+      }}
+      onMouseLeave={(e) => {
+        e.target.style.background = '#f97316';
+      }}
+      >
+        Request Callback
+      </button>
                 </div>
               </div>
             </div>
 
-          {/* Section 2: Gap Addressing */}
-          <div style={{ marginBottom: '3rem' }}>
-                <div style={{ background: 'linear-gradient(135deg, #fdfbff, #f4f7ff)', borderRadius: '26px', padding: '3rem', marginBottom: '3rem', boxShadow: '0 35px 60px rgba(79,70,229,0.12)', border: '1px solid rgba(191, 197, 255, 0.4)', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', width: '220px', height: '220px', borderRadius: '50%', background: 'rgba(129,140,248,0.1)', top: '-80px', right: '-60px', filter: 'blur(14px)' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.25rem', alignItems: 'center', marginBottom: '2rem', position: 'relative' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'linear-gradient(135deg, #a855f7, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 25px 40px rgba(124,58,237,0.45)' }}>
-                        <Target style={{ width: '28px', height: '28px', color: '#fff' }} />
-                          </div>
-                        <div>
-                        <h3 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#2f0f55', margin: 0 }}>How Coding Ninjas Fills Your Resume Gaps</h3>
-                        <p style={{ margin: '0.3rem 0 0', color: '#5b21b6', fontWeight: 600, fontSize: '1rem' }}>Every gap mapped to a curriculum sprint</p>
-                          </div>
-                        </div>
-                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                      {[
-                        { label: 'Critical gaps covered', value: modulesAddressingGaps.length || 0 },
-                        { label: 'Modules tapped', value: curriculumModulesUsed.length || 0 },
-                        { label: 'New skills added', value: addedSkillsList.length || 0 }
-                ].map((stat, idx) => (
-                        <div key={idx} style={{ padding: '0.9rem 1.1rem', background: 'rgba(255,255,255,0.75)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.8)', minWidth: '160px', boxShadow: '0 10px 20px rgba(15,23,42,0.08)' }}>
-                          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#312e81' }}>{stat.value}</div>
-                          <div style={{ fontSize: '0.85rem', color: '#4c1d95', fontWeight: 600 }}>{stat.label}</div>
-                  </div>
-                ))}
-              </div>
-                        </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', position: 'relative' }}>
-                    {modulesAddressingGaps.map((item, idx) => {
-                      const palette = gapVisualPalettes[idx % gapVisualPalettes.length];
-                      return (
-                        <div key={idx} style={{ position: 'relative', background: '#ffffff', borderRadius: '24px', padding: '2rem', boxShadow: '0 24px 40px rgba(15,23,42,0.12)', border: `1px solid ${palette.gapBorder}`, display: 'flex', flexDirection: 'column', gap: '1.5rem', overflow: 'hidden' }}>
-                          <div style={{ position: 'absolute', width: '180px', height: '180px', borderRadius: '50%', background: palette.glow, top: '-60px', right: '-30px', filter: 'blur(16px)' }} />
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', position: 'relative' }}>
-                            <div style={{ flex: 1, background: palette.gapBg, borderRadius: '18px', padding: '1.1rem 1.25rem', border: `1px dashed ${palette.gapBorder}` }}>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.8rem', borderRadius: '999px', background: 'rgba(255,255,255,0.7)', color: palette.accent, fontWeight: 700, fontSize: '0.78rem', marginBottom: '0.45rem' }}>
-                                <AlertCircle style={{ width: '16px', height: '16px' }} />
-                                Gap detected
-                              </span>
-                              <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.4 }}>{item.gap}</div>
-                      </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                              <span style={{ padding: '0.3rem 0.75rem', borderRadius: '999px', background: '#ede9fe', color: '#5b21b6', fontWeight: 700, fontSize: '0.75rem' }}>Sprint {idx + 1}</span>
-                              <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'linear-gradient(135deg, #c7d2fe, #a5b4fc)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#312e81', fontWeight: 800, fontSize: '1.2rem' }}>→</div>
-                      </div>
-                    </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', position: 'relative' }}>
-                            <div style={{ background: palette.moduleBg, borderRadius: '18px', padding: '1.25rem', border: `1px solid ${palette.moduleBorder}` }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.7rem' }}>
-                                <span style={{ fontSize: '0.82rem', color: '#312e81', fontWeight: 700 }}>CN fix deployed</span>
-                                <span style={{ padding: '0.3rem 0.8rem', borderRadius: '999px', background: '#ffffff', border: '1px solid rgba(49,46,129,0.15)', fontWeight: 700, fontSize: '0.75rem', color: '#312e81' }}>{item.timeline}</span>
+          {/* Testimonials Section */}
+<div style={{ marginTop: '2rem', marginBottom: '4rem',maxWidth: '1312px', marginLeft: '2rem' }}>
+            <h1 style={{ 
+              fontSize: '1.5rem', 
+              fontWeight: 700, 
+              color: '#111827', 
+              marginBottom: '3rem',
+              textAlign: 'left',
+              fontFamily: 'Archivo'
+            }}>
+              Our Learners Say
+            </h1>
+            
+            <div style={{ 
+              background: '#FAFAFB', 
+              borderRadius: '16px', 
+              padding: '2rem 1rem', 
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              height: '470px',
+              overflow: 'visible'
+            }}>
+              <p style={{ 
+                textAlign: 'center', 
+                color: '#F66C3B', 
+                fontSize: '1.25rem', 
+                marginBottom: '3rem',
+                fontWeight: 500,
+                fontFamily: 'Inter'
+              }}>
+                2,000+ learners bridged their skill gaps successfully.
+              </p>
+
+              <TestimonialsCarousel />
                 </div>
-                              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1e1b4b' }}>{item.module}</div>
-                    </div>
-                            <div style={{ background: '#f8fafc', borderRadius: '18px', padding: '1.15rem', border: '1px solid #e2e8f0' }}>
-                              <div style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, color: '#475569', marginBottom: '0.4rem' }}>Impact on resume</div>
-                              <p style={{ margin: 0, color: '#0f172a', fontSize: '0.95rem', lineHeight: 1.65 }}>
-                                {item.description}
-                              </p>
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.85rem', padding: '0.4rem 0.85rem', borderRadius: '999px', background: '#dcfce7', color: '#166534', fontWeight: 700, fontSize: '0.8rem' }}>
-                                <CheckCircle style={{ width: '16px', height: '16px' }} />
-                                Skill gap closed
-                    </div>
-                  </div>
-                </div>
-              </div>
-                      );
-                    })}
-                  </div>
                 </div>
                       </div>
 
           {/* Graph Section - Moved to Bottom */}
-          <div style={{ marginTop: '4rem', marginBottom: '2rem' }}>
+          <div style={{marginBottom: '2rem', maxWidth: '1350px', marginLeft: '2rem', marginRight: 'auto' }}>
             <ComparisonGraph />
                         </div>
 
           {/* Footer */}
           <footer style={{
-            background: '#f9fafb',
-            borderTop: '1px solid #e5e7eb',
+            background: '#FFFFFF',
+            borderTop: '0.5px solid #DEE1E6',
             padding: '2rem 1rem',
             marginTop: '4rem',
-            boxShadow: '0 -1px 3px rgba(0, 0, 0, 0.1)'
           }}>
             <div style={{
               maxWidth: '1280px',

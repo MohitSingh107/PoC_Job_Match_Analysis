@@ -1,10 +1,95 @@
 {
   "full_analysis": {
-    "analysis_summary": "The resume demonstrates foundational data analytics skills and relevant projects but lacks key tools like Power BI and Pandas; ATS compatibility is decent but could improve with consistent formatting.",
-    "ats_analysis": {
-      "reasoning": "The resume uses a simple single-column layout with standard fonts and clear section headers, but inconsistent date formats and some formatting issues reduce ATS parsing efficiency."
+    "user_level": "Fresher",
+    "experience_reasoning": "The candidate has no explicit work experience in Data Analytics roles. The only relevant experience is an ongoing Instrument and Controls Engineer role since Nov 2020, which is not directly Data Analytics. Trainings and projects related to Machine Learning and Python are present but no explicit DA job experience. Hence, experience duration in DA is 0 years, classifying as Fresher.",
+    "skills_analysis": {
+      "has_skills": [
+        "Java",
+        "SQL",
+        "Python",
+        "Machine Learning",
+        "Excel",
+        "MATLAB",
+        "MS Excel",
+        "Jupyter"
+      ],
+      "missing_skills": [
+        "Power BI",
+        "NumPy",
+        "Pandas",
+        "Matplotlib",
+        "Seaborn"
+      ]
     },
-    "experience_reasoning": "The candidate has no explicit work experience in Data Analytics roles. The only relevant experience is an ongoing Instrument and Controls Engineer role since Nov 2020, which is not directly Data Analytics. Trainings and projects related to Machine Learning and Python are present but no explicit DA job experience. Hence, experience duration in DA is effectively 0 years, classifying as Fresher.",
+    "projects_analysis": {
+      "projects_to_keep": [
+        "Pneumonia detection from Chest X-ray images using Deep Learning"
+      ],
+      "projects_to_remove": [
+        "Relative localization using the concept of Swarm Robotics",
+        "Smart Urban Farming – Automatic Rooftop Using Arduino Uno"
+      ]
+    },
+    "keywords_analysis": {
+      "present_keywords": [
+        "Java",
+        "SQL",
+        "Python",
+        "Machine Learning",
+        "Deep Learning",
+        "Convolutional Neural Networks",
+        "Industrial Instruments",
+        "Control Systems",
+        "Signals",
+        "Wiring",
+        "Loops",
+        "Instrument Index",
+        "P&IDs",
+        "Datasheets",
+        "Loop Diagrams",
+        "Smart Plant Instrumentation",
+        "AutoCad",
+        "Eclipse IDE",
+        "MATLAB",
+        "MS Excel",
+        "Jupyter",
+        "Image Classification",
+        "Arduino Uno"
+      ],
+      "missing_keywords": [
+        "Power BI",
+        "NumPy",
+        "Pandas",
+        "Matplotlib",
+        "Seaborn",
+        "Power Query",
+        "DAX",
+        "Data Modeling",
+        "ETL",
+        "Tableau",
+        "R",
+        "Data Warehousing",
+        "Data Visualization",
+        "Statistical Analysis",
+        "Data Cleaning",
+        "Data Wrangling",
+        "SQL Window Functions",
+        "CTEs",
+        "VLOOKUP",
+        "Pivot Tables",
+        "Data Governance",
+        "Big Data Tools",
+        "Cloud Platforms (AWS, Azure, GCP)"
+      ]
+    },
+    "ats_analysis": {
+      "reasoning": "The resume uses a simple single-column format with standard fonts and clear section headers, but inconsistent date formats and some non-standard section titles reduce ATS parsing efficiency."
+    },
+    "scores": {
+      "job_relevance_score": 55,
+      "ats_score": 70,
+      "score_reasoning": "The candidate has foundational skills in Python, SQL, and Machine Learning with relevant projects, but lacks key data analytics libraries and tools like Pandas and Power BI, limiting job relevance. The resume is ATS-friendly overall but could improve with consistent formatting and clearer section naming."
+    },
     "job_market_analysis": {
       "jobs_analyzed": 89,
       "top_skills": [
@@ -19,56 +104,6 @@
         "Machine Learning (appears in 1.12%) - Demand: Growing"
       ]
     },
-    "keywords_analysis": {
-      "missing_keywords": [
-        "Power BI",
-        "NumPy",
-        "Pandas",
-        "Matplotlib",
-        "Seaborn"
-      ],
-      "present_keywords": [
-        "Java",
-        "SQL",
-        "Python",
-        "Machine Learning",
-        "Excel",
-        "MATLAB",
-        "Jupyter"
-      ]
-    },
-    "projects_analysis": {
-      "projects_to_keep": [
-        "Pneumonia detection from Chest X-ray images using Deep Learning"
-      ],
-      "projects_to_remove": [
-        "Relative localization using the concept of Swarm Robotics",
-        "Smart Urban Farming \u2013 Automatic Rooftop Using Arduino Uno"
-      ]
-    },
-    "scores": {
-      "ats_score": 75,
-      "job_relevance_score": 65,
-      "score_reasoning": "Strong presence of core skills and relevant projects boosts job relevance, but missing key analytics tools and limited direct experience lower the score; ATS score is good due to simple format but affected by inconsistent date formatting and minor structural issues."
-    },
-    "skills_analysis": {
-      "has_skills": [
-        "Java",
-        "SQL",
-        "Python",
-        "Machine Learning",
-        "Excel",
-        "MATLAB",
-        "Jupyter"
-      ],
-      "missing_skills": [
-        "Power BI",
-        "NumPy",
-        "Pandas",
-        "Matplotlib",
-        "Seaborn"
-      ]
-    },
-    "user_level": "Fresher"
+    "analysis_summary": "The resume demonstrates a solid technical foundation and relevant projects for a fresher but misses critical data analytics tools and libraries, which impacts job relevance. ATS compatibility is good but can be enhanced with consistent formatting and clearer section headers."
   }
 }
