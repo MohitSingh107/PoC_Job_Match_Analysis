@@ -1,109 +1,113 @@
 {
   "full_analysis": {
-    "user_level": "Fresher",
-    "experience_reasoning": "The candidate has no explicit work experience in Data Analytics roles. The only relevant experience is an ongoing Instrument and Controls Engineer role since Nov 2020, which is not directly Data Analytics. Trainings and projects related to Machine Learning and Python are present but no explicit DA job experience. Hence, experience duration in DA is 0 years, classifying as Fresher.",
+    "user_level": "Intermediate",
+    "experience_reasoning": "The candidate has explicitly stated 2+ years of experience as a Data Analyst, with the current role starting in August 2023 and a total experience of approximately 2 years mentioned in the profile summary. This places the candidate in the Intermediate level (1.00-3.00 years).",
     "skills_analysis": {
       "has_skills": [
-        "Java",
-        "SQL",
         "Python",
-        "Machine Learning",
+        "SQL",
+        "MySQL",
+        "Power BI",
         "Excel",
-        "MATLAB",
-        "MS Excel",
-        "Jupyter"
-      ],
-      "missing_skills": [
-        "Power BI",
-        "NumPy",
-        "Pandas",
-        "Matplotlib",
-        "Seaborn"
-      ]
-    },
-    "projects_analysis": {
-      "projects_to_keep": [
-        "Pneumonia detection from Chest X-ray images using Deep Learning"
-      ],
-      "projects_to_remove": [
-        "Relative localization using the concept of Swarm Robotics",
-        "Smart Urban Farming – Automatic Rooftop Using Arduino Uno"
-      ]
-    },
-    "keywords_analysis": {
-      "present_keywords": [
-        "Java",
-        "SQL",
-        "Python",
-        "Machine Learning",
-        "Deep Learning",
-        "Convolutional Neural Networks",
-        "Industrial Instruments",
-        "Control Systems",
-        "Signals",
-        "Wiring",
-        "Loops",
-        "Instrument Index",
-        "P&IDs",
-        "Datasheets",
-        "Loop Diagrams",
-        "Smart Plant Instrumentation",
-        "AutoCad",
-        "Eclipse IDE",
-        "MATLAB",
-        "MS Excel",
-        "Jupyter",
-        "Image Classification",
-        "Arduino Uno"
-      ],
-      "missing_keywords": [
-        "Power BI",
         "NumPy",
         "Pandas",
         "Matplotlib",
         "Seaborn",
-        "Power Query",
-        "DAX",
-        "Data Modeling",
-        "ETL",
-        "Tableau",
-        "R",
-        "Data Warehousing",
-        "Data Visualization",
-        "Statistical Analysis",
-        "Data Cleaning",
-        "Data Wrangling",
-        "SQL Window Functions",
+        "EDA",
+        "DAX"
+      ],
+      "missing_skills": [
+        "Statistics"
+      ]
+    },
+    "projects_analysis": {
+      "projects_to_keep": [
+        "PhonePe Digital Payments Dataset",
+        "Social Media Ad Campaign Performance",
+        "E Commerce",
+        "CPI Inflation"
+      ],
+      "projects_to_remove": []
+    },
+    "keywords_analysis": {
+      "present_keywords": [
         "CTEs",
-        "VLOOKUP",
+        "Window Functions",
+        "Joins",
+        "Aggregations",
+        "Subqueries",
+        "Pandas",
+        "NumPy",
+        "Matplotlib",
+        "Seaborn",
+        "Power Query (not mentioned explicitly)",
+        "DAX",
         "Pivot Tables",
+        "VLOOKUP",
+        "SUMIFS",
+        "RFM Analysis",
+        "SQL-style grouping",
+        "Statistical formulas",
+        "KPI Reporting",
+        "Reporting Automation",
+        "Exploratory Data Analysis (EDA)",
+        "Data Validation",
+        "Dashboard Automation",
+        "Data Storytelling",
+        "Data Preparation Automation",
+        "Data Visualization",
+        "Python scripting for automation",
+        "Excel formulas",
+        "Customer Segmentation",
+        "Retention Strategies",
+        "Churn Analysis",
+        "Data Consolidation",
+        "Dynamic Charting",
+        "Demographic Analysis"
+      ],
+      "missing_keywords": [
+        "Power Query",
+        "ETL",
+        "AWS",
+        "Data Modeling",
+        "Statistics",
+        "R",
+        "Machine Learning",
+        "Big Data Tools (e.g., Hadoop, Spark)",
+        "Cloud Platforms (Azure, GCP)",
+        "Advanced Statistical Techniques",
+        "Data Warehousing",
+        "Automation with Airflow or similar",
+        "Version Control (Git explicitly)",
         "Data Governance",
-        "Big Data Tools",
-        "Cloud Platforms (AWS, Azure, GCP)"
+        "SQL Window Functions (explicitly named as 'Window Functions' but no advanced usage details)",
+        "Advanced DAX (beyond measures)",
+        "Data Pipelines"
       ]
     },
     "ats_analysis": {
-      "reasoning": "The resume uses a simple single-column format with standard fonts and clear section headers, but inconsistent date formats and some non-standard section titles reduce ATS parsing efficiency."
+      "reasoning": "The resume uses a simple single-column layout with standard fonts and clear section headers in reverse chronological order. Contact information is complete and placed at the top, and dates are consistently formatted, making it ATS-friendly."
     },
     "scores": {
-      "job_relevance_score": 55,
-      "ats_score": 70,
-      "score_reasoning": "The candidate has foundational skills in Python, SQL, and Machine Learning with relevant projects, but lacks key data analytics libraries and tools like Pandas and Power BI, limiting job relevance. The resume is ATS-friendly overall but could improve with consistent formatting and clearer section naming."
+      "job_relevance_score": 85,
+      "ats_score": 90,
+      "score_reasoning": "Strong alignment with core intermediate data analytics skills and relevant projects with quantification supports a high job relevance score. The clean, well-structured format and keyword-rich content yield a high ATS score."
     },
     "job_market_analysis": {
-      "jobs_analyzed": 89,
+      "jobs_analyzed": 83,
       "top_skills": [
-        "Excel (appears in 91.01%) - Demand: Critical",
-        "SQL (appears in 76.40%) - Demand: Critical",
-        "Power BI (appears in 32.58%) - Demand: Essential",
-        "Python (appears in 29.21%) - Demand: Essential",
-        "NumPy (appears in 3.37%) - Demand: Growing",
-        "Pandas (appears in 3.37%) - Demand: Growing",
-        "Matplotlib (appears in 3.37%) - Demand: Growing",
-        "Seaborn (appears in 3.37%) - Demand: Growing",
-        "Machine Learning (appears in 1.12%) - Demand: Growing"
+        "SQL (appears in 89.16%) - Demand: Critical",
+        "Excel (appears in 69.88%) - Demand: Critical",
+        "Power BI (appears in 59.04%) - Demand: High",
+        "Python (appears in 57.83%) - Demand: High",
+        "Data Visualization (appears in 18.07%) - Demand: Growing",
+        "ETL (appears in 14.46%) - Demand: Growing",
+        "AWS (appears in 10.84%) - Demand: Growing",
+        "Pandas (appears in 10.84%) - Demand: Growing",
+        "NumPy (appears in 9.64%) - Demand: Growing",
+        "R (appears in 8.43%) - Demand: Growing"
       ]
     },
-    "analysis_summary": "The resume demonstrates a solid technical foundation and relevant projects for a fresher but misses critical data analytics tools and libraries, which impacts job relevance. ATS compatibility is good but can be enhanced with consistent formatting and clearer section headers."
+    "analysis_summary": "The resume effectively demonstrates intermediate-level data analytics skills with strong project experience and quantification, though it lacks some growing market skills like ETL, AWS, and advanced statistics. The format is ATS-optimized, supporting good keyword parsing and readability."
   }
 }

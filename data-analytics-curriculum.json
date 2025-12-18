@@ -70,11 +70,8 @@
     {
       "module": "Python Programming",
       "skills": [
-        "Python Basics",
-        "Python Syntax & Variables",
         "Python Operators",
         "String Manipulation",
-        "Python Data Structures (Lists, Tuples, Sets, Dictionaries)",
         "Conditional Statements",
         "Loops",
         "Control Flow",
@@ -87,7 +84,6 @@
         "Pandas Series",
         "Pandas Data Manipulation",
         "Matplotlib & Seaborn",
-        "Object Oriented Programming (OOP)",
         "Database Connectivity"
       ],
       "caseStudies": [
@@ -102,7 +98,6 @@
         "Data Collection Techniques",
         "Sampling & Measures of Central Tendency",
         "Measures of Dispersion",
-        "Probability",
         "Probability Distributions",
         "Central Limit Theorem",
         "Distribution Properties",
@@ -119,7 +114,6 @@
     {
       "module": "Generative AI (Live lectures)",
       "skills": [
-        "Generative AI Concepts",
         "Prompt Engineering",
         "Generative AI in Excel",
         "AI-Assisted Python Development",

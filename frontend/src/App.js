@@ -37,63 +37,55 @@ const findProjectGitHubLink = (projectName, extractedLinks) => {
   
   const normalizedProjectName = projectName.toLowerCase().trim();
   
-  // Normalize project name for matching (remove common words, handle variations)
   const normalizeForMatching = (name) => {
     return name
       .toLowerCase()
-      .replace(/\s+/g, '-')  // Replace spaces with hyphens
-      .replace(/[^a-z0-9_-]/g, '') // Remove special chars
-      .replace(/-+/g, '-')   // Normalize multiple hyphens
-      .replace(/_+/g, '_');  // Normalize multiple underscores
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9_-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/_+/g, '_');
   };
   
   const normalizedProject = normalizeForMatching(normalizedProjectName);
   
-  // Extract key words from project name for fuzzy matching
+  // Extract MEANINGFUL keywords (length > 4 to avoid common words)
   const projectKeywords = normalizedProjectName
     .split(/\s+/)
-    .filter(word => word.length > 2) // Filter out short words
+    .filter(word => word.length > 4) // ← Changed from 2 to 4
     .map(word => word.toLowerCase());
   
   for (const link of extractedLinks) {
     if (!link.url || !link.text) continue;
     
     const url = link.url.toLowerCase();
-    
-    // Only process GitHub links
     if (!url.includes('github.com')) continue;
     
-    // Extract repository name from URL (format: github.com/username/repo-name)
     const repoMatch = url.match(/github\.com\/[^/]+\/([^/?]+)/);
     if (!repoMatch) continue;
     
     const repoName = repoMatch[1].toLowerCase();
     const normalizedRepo = normalizeForMatching(repoName);
     
-    // Try exact match first
+    // Priority 1: Exact match
     if (normalizedRepo === normalizedProject || repoName === normalizedProject) {
       return link.url;
     }
     
-    // Try partial match - check if repo name contains project keywords
-    const repoContainsProject = projectKeywords.some(keyword => 
-      normalizedRepo.includes(keyword) || repoName.includes(keyword)
-    );
-    
-    // Also check if project name contains repo keywords
-    const repoKeywords = repoName.split(/[-_]/).filter(w => w.length > 2);
-    const projectContainsRepo = repoKeywords.some(keyword =>
-      normalizedProject.includes(keyword) || normalizedProjectName.includes(keyword)
-    );
-    
-    if (repoContainsProject || projectContainsRepo) {
+    // Priority 2: Check if normalized project is contained in repo (not just keywords)
+    if (normalizedRepo.includes(normalizedProject) || normalizedProject.includes(normalizedRepo)) {
       return link.url;
     }
     
-    // Try matching key parts (e.g., "phonepe" matches "PhonePe-Python")
-    const projectKeyPart = projectKeywords.find(kw => kw.length > 4); // Use longest keyword
-    if (projectKeyPart && (normalizedRepo.includes(projectKeyPart) || repoName.includes(projectKeyPart))) {
-      return link.url;
+    // Priority 3: Check for meaningful keyword matches (require at least 2 matches)
+    if (projectKeywords.length > 0) {
+      const matchCount = projectKeywords.filter(keyword =>
+        normalizedRepo.includes(keyword) || repoName.includes(keyword)
+      ).length;
+      
+      // Require at least 2 keyword matches OR 1 match if keyword is very long (>8 chars)
+      if (matchCount >= 2 || (matchCount === 1 && projectKeywords[0].length > 8)) {
+        return link.url;
+      }
     }
   }
   
@@ -965,6 +957,35 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
       const educationEntries = [];
       let currentEntry = [];
       
+      // Helper function to detect school/secondary education lines
+      const isSchoolEducation = (line) => {
+        const lower = line.toLowerCase();
+        // Check for explicit school markers
+        if (/class\s*(x|xii|10|12|tenth|twelfth)/i.test(lower)) return true;
+        if (/\b(secondary|higher\s+secondary|matriculation)\b/i.test(lower)) return true;
+        // Check for "School" WITHOUT university context
+        if (/\bschool\b/i.test(lower) && 
+            !/\b(university|college|institute)\b/i.test(lower) &&
+            !/\bschool\s+of\s+(engineering|technology|management|business)/i.test(lower)) {
+          return true;
+        }
+        return false;
+      };
+      
+      // Helper function to detect degree lines (Bachelor's/Master's only)
+      const isHigherEducationDegree = (line) => {
+        return /\b(B\.Tech|B\.E\.|B\.Sc\.|M\.Tech|M\.B\.A|M\.Sc\.|Bachelor|Master|Degree|BE|BTech|MTech|MBA)\b/i.test(line);
+      };
+      
+      // Helper function to detect university/college lines
+      const isUniversityStart = (line) => {
+        const lower = line.toLowerCase();
+        // Must have university markers AND not be school education
+        return (/\b(university|college|institute)\b/i.test(line) || 
+                /\bschool\s+of\s+(engineering|technology|management|business)/i.test(lower)) &&
+               !isSchoolEducation(line);
+      };
+      
       // Group consecutive lines into education entries
       for (let i = 0; i < lines.length; i++) {
         const trimmed = lines[i].trim();
@@ -975,13 +996,21 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
             educationEntries.push([...currentEntry]);
             currentEntry = [];
           }
+        } else if (isSchoolEducation(trimmed)) {
+          // SKIP school education lines completely
+          // If we have a current entry, save it first (this school line starts a new section)
+          if (currentEntry.length > 0) {
+            educationEntries.push([...currentEntry]);
+            currentEntry = [];
+          }
+          // Don't add this line to any entry - it's filtered out
+          continue;
         } else {
-          // Check if this looks like start of new entry (degree pattern or university pattern)
-          const isDegreeStart = /\b(B\.Tech|B\.E\.|B\.Sc\.|M\.Tech|M\.B\.A|Bachelor|Master|Degree|BE|BTech|MTech)\b/i.test(trimmed);
-          const isUniversityStart = /\b(University|College|Institute|School|Academy)\b/i.test(trimmed) && 
-                                    !/\b(B\.Tech|B\.E\.|B\.Sc\.|M\.Tech|M\.B\.A|Bachelor|Master|Degree)\b/i.test(trimmed);
+          // Check if this looks like start of new entry (degree or university)
+          const isDegreeStart = isHigherEducationDegree(trimmed);
+          const isUnivStart = isUniversityStart(trimmed);
           
-          if ((isDegreeStart || isUniversityStart) && currentEntry.length > 0) {
+          if ((isDegreeStart || isUnivStart) && currentEntry.length > 0) {
             // Start of new entry, save previous one
             educationEntries.push([...currentEntry]);
             currentEntry = [trimmed];
@@ -5386,194 +5415,232 @@ if (step === 'analyzing') {
       const lines = normalizedContent.split('\n');
       
       // Special handling for education section: group lines into entries and parse intelligently
-      if (sectionType === 'education') {
-        const educationEntries = [];
-        let currentEntry = [];
+          // Special handling for education section: group lines into entries and parse intelligently
+    if (sectionType === 'education') {
+      const educationEntries = [];
+      let currentEntry = [];
+      
+      // Helper function to detect school/secondary education lines
+      const isSchoolEducation = (line) => {
+        const lower = line.toLowerCase();
+        // Check for explicit school markers
+        if (/class\s*(x|xii|10|12|tenth|twelfth)/i.test(lower)) return true;
+        if (/\b(secondary|higher\s+secondary|matriculation)\b/i.test(lower)) return true;
+        // Check for "School" WITHOUT university context
+        if (/\bschool\b/i.test(lower) && 
+            !/\b(university|college|institute)\b/i.test(lower) &&
+            !/\bschool\s+of\s+(engineering|technology|management|business)/i.test(lower)) {
+          return true;
+        }
+        return false;
+      };
+      
+      // Helper function to detect degree lines (Bachelor's/Master's only)
+      const isHigherEducationDegree = (line) => {
+        return /\b(B\.Tech|B\.E\.|B\.Sc\.|M\.Tech|M\.B\.A|M\.Sc\.|Bachelor|Master|Degree|BE|BTech|MTech|MBA)\b/i.test(line);
+      };
+      
+      // Helper function to detect university/college lines
+      const isUniversityStart = (line) => {
+        const lower = line.toLowerCase();
+        // Must have university markers AND not be school education
+        return (/\b(university|college|institute)\b/i.test(line) || 
+                /\bschool\s+of\s+(engineering|technology|management|business)/i.test(lower)) &&
+               !isSchoolEducation(line);
+      };
+      
+      // Group consecutive lines into education entries
+      for (let i = 0; i < lines.length; i++) {
+        const trimmed = lines[i].trim();
         
-        // Group consecutive lines into education entries
-        for (let i = 0; i < lines.length; i++) {
-          const trimmed = lines[i].trim();
+        if (!trimmed) {
+          // Empty line: if we have an entry, save it and start new
+          if (currentEntry.length > 0) {
+            educationEntries.push([...currentEntry]);
+            currentEntry = [];
+          }
+        } else if (isSchoolEducation(trimmed)) {
+          // SKIP school education lines completely
+          // If we have a current entry, save it first (this school line starts a new section)
+          if (currentEntry.length > 0) {
+            educationEntries.push([...currentEntry]);
+            currentEntry = [];
+          }
+          // Don't add this line to any entry - it's filtered out
+          continue;
+        } else {
+          // Check if this looks like start of new entry (degree or university)
+          const isDegreeStart = isHigherEducationDegree(trimmed);
+          const isUnivStart = isUniversityStart(trimmed);
           
-          if (!trimmed) {
-            // Empty line: if we have an entry, save it and start new
-            if (currentEntry.length > 0) {
-              educationEntries.push([...currentEntry]);
-              currentEntry = [];
-            }
+          if ((isDegreeStart || isUnivStart) && currentEntry.length > 0) {
+            // Start of new entry, save previous one
+            educationEntries.push([...currentEntry]);
+            currentEntry = [trimmed];
           } else {
-            // Check if this looks like start of new entry (degree pattern or university pattern)
-            const isDegreeStart = /\b(B\.Tech|B\.E\.|B\.Sc\.|M\.Tech|M\.B\.A|Bachelor|Master|Degree|BE|BTech|MTech)\b/i.test(trimmed);
-            const isUniversityStart = /\b(University|College|Institute|School|Academy)\b/i.test(trimmed) && 
-                                      !/\b(B\.Tech|B\.E\.|B\.Sc\.|M\.Tech|M\.B\.A|Bachelor|Master|Degree)\b/i.test(trimmed);
-            
-            if ((isDegreeStart || isUniversityStart) && currentEntry.length > 0) {
-              // Start of new entry, save previous one
-              educationEntries.push([...currentEntry]);
-              currentEntry = [trimmed];
+            currentEntry.push(trimmed);
+          }
+        }
+      }
+      
+      // Don't forget the last entry
+      if (currentEntry.length > 0) {
+        educationEntries.push([...currentEntry]);
+      }
+      
+      // Parse and render each education entry
+      const smallLineHeight = 1.4;
+      const sectionSpacing = '0.5rem';
+      const textMargin = '0.2rem';
+      
+      return educationEntries.map((entryLines, entryIdx) => {
+        // Intelligently identify fields regardless of order
+        let university = '';
+        let degree = '';
+        let duration = '';
+        let cgpa = '';
+        
+        entryLines.forEach(line => {
+          const trimmed = line.trim();
+          
+          // Check for CGPA/GPA/Percentage (usually on separate line)
+          if (!cgpa) {
+            // Try CGPA first
+            const cgpaMatch = trimmed.match(/CGPA\s*:?\s*[\d.]+/i);
+            if (cgpaMatch) {
+              cgpa = cgpaMatch[0];
+              return; // Skip further processing for CGPA line
             } else {
-              currentEntry.push(trimmed);
+              // Try GPA
+              const gpaMatch = trimmed.match(/GPA\s*:?\s*[\d.]+/i);
+              if (gpaMatch) {
+                cgpa = gpaMatch[0];
+                return; // Skip further processing for GPA line
+              } else {
+                // Try Percentage
+                const percentMatch = trimmed.match(/(Percentage|%)\s*:?\s*[\d.]+/i);
+                if (percentMatch) {
+                  cgpa = percentMatch[0];
+                  return; // Skip further processing for percentage line
+                } else if (/^\d+\.\d+%?$/.test(trimmed) && trimmed.length < 10) {
+                  // Standalone CGPA/GPA number (e.g., "7.47" or "3.5")
+                  cgpa = `CGPA: ${trimmed}`;
+                  return; // Skip further processing
+                }
+              }
             }
           }
-        }
-        
-        // Don't forget the last entry
-        if (currentEntry.length > 0) {
-          educationEntries.push([...currentEntry]);
-        }
-        
-        // Parse and render each education entry
-        const smallLineHeight = 1.4;
-        const sectionSpacing = '0.5rem';
-        const textMargin = '0.2rem';
-        
-        return educationEntries.map((entryLines, entryIdx) => {
-          // Intelligently identify fields regardless of order
-          let university = '';
-          let degree = '';
-          let duration = '';
-          let cgpa = '';
           
-          entryLines.forEach(line => {
+          // Check for degree line that might contain duration (format: "Degree | Duration")
+          if (!degree && /\b(B\.Tech|B\.E\.|B\.Sc\.|M\.Tech|M\.B\.A|Bachelor|Master|Degree|BE|BTech|MTech)\b/i.test(trimmed)) {
+            // Check if degree line contains duration (has pipe separator with dates)
+            if (trimmed.includes('|') && /(\d{4}\s*[-–—]\s*\d{4}|\d{4}\s*[-–—]\s*Present|\d{4}\s*[-–—]\s*Current)/i.test(trimmed)) {
+              const parts = trimmed.split('|').map(p => p.trim());
+              degree = parts[0]; // First part is degree
+              // Extract duration from remaining parts
+              const durationMatch = trimmed.match(/(\d{4}\s*[-–—]\s*(?:\d{4}|Present|Current))/i);
+              if (durationMatch && !duration) {
+                duration = durationMatch[1];
+              }
+            } else {
+            degree = trimmed;
+            }
+            return; // Skip further processing for degree line
+          }
+          
+          // Check for duration on standalone line (only if not already found in degree line)
+          if (!duration && /(\d{4}\s*[-–—]\s*\d{4}|\d{4}\s*[-–—]\s*Present|\d{4}\s*[-–—]\s*Current)/i.test(trimmed)) {
+            duration = trimmed.replace(/.*?(\d{4}\s*[-–—]\s*(?:\d{4}|Present|Current)).*/i, '$1');
+            return; // Skip further processing for duration line
+          }
+          
+          // Check for university (long names with University/College/Institute, or if no other match)
+          if (!university && /\b(University|College|Institute|School|Academy)\b/i.test(trimmed) && 
+              !/\b(B\.Tech|B\.E\.|B\.Sc\.|M\.Tech|M\.B\.A|Bachelor|Master|Degree)\b/i.test(trimmed) &&
+              !/(\d{4}\s*[-–—]\s*\d{4})/i.test(trimmed) &&
+              !/(CGPA|GPA|Percentage|%)/i.test(trimmed)) {
+            university = trimmed;
+          }
+        });
+        
+        // If we still don't have university, use the longest line that's not degree/duration/cgpa
+        if (!university) {
+          const candidates = entryLines.filter(line => {
             const trimmed = line.trim();
-            
-            // Check for CGPA/GPA/Percentage (usually on separate line)
-            if (!cgpa) {
-              // Try CGPA first
-              const cgpaMatch = trimmed.match(/CGPA\s*:?\s*[\d.]+/i);
-              if (cgpaMatch) {
-                cgpa = cgpaMatch[0];
-                return; // Skip further processing for CGPA line
-              } else {
-                // Try GPA
-                const gpaMatch = trimmed.match(/GPA\s*:?\s*[\d.]+/i);
-                if (gpaMatch) {
-                  cgpa = gpaMatch[0];
-                  return; // Skip further processing for GPA line
-                } else {
-                  // Try Percentage
-                  const percentMatch = trimmed.match(/(Percentage|%)\s*:?\s*[\d.]+/i);
-                  if (percentMatch) {
-                    cgpa = percentMatch[0];
-                    return; // Skip further processing for percentage line
-                  } else if (/^\d+\.\d+%?$/.test(trimmed) && trimmed.length < 10) {
-                    // Standalone CGPA/GPA number (e.g., "7.47" or "3.5")
-                    cgpa = `CGPA: ${trimmed}`;
-                    return; // Skip further processing
-                  }
-                }
-              }
-            }
-            
-            // Check for degree line that might contain duration (format: "Degree | Duration")
-            if (!degree && /\b(B\.Tech|B\.E\.|B\.Sc\.|M\.Tech|M\.B\.A|Bachelor|Master|Degree|BE|BTech|MTech)\b/i.test(trimmed)) {
-              // Check if degree line contains duration (has pipe separator with dates)
-              if (trimmed.includes('|') && /(\d{4}\s*[-–—]\s*\d{4}|\d{4}\s*[-–—]\s*Present|\d{4}\s*[-–—]\s*Current)/i.test(trimmed)) {
-                const parts = trimmed.split('|').map(p => p.trim());
-                degree = parts[0]; // First part is degree
-                // Extract duration from remaining parts
-                const durationMatch = trimmed.match(/(\d{4}\s*[-–—]\s*(?:\d{4}|Present|Current))/i);
-                if (durationMatch && !duration) {
-                  duration = durationMatch[1];
-                }
-              } else {
-              degree = trimmed;
-              }
-              return; // Skip further processing for degree line
-            }
-            
-            // Check for duration on standalone line (only if not already found in degree line)
-            if (!duration && /(\d{4}\s*[-–—]\s*\d{4}|\d{4}\s*[-–—]\s*Present|\d{4}\s*[-–—]\s*Current)/i.test(trimmed)) {
-              duration = trimmed.replace(/.*?(\d{4}\s*[-–—]\s*(?:\d{4}|Present|Current)).*/i, '$1');
-              return; // Skip further processing for duration line
-            }
-            
-            // Check for university (long names with University/College/Institute, or if no other match)
-            if (!university && /\b(University|College|Institute|School|Academy)\b/i.test(trimmed) && 
-                !/\b(B\.Tech|B\.E\.|B\.Sc\.|M\.Tech|M\.B\.A|Bachelor|Master|Degree)\b/i.test(trimmed) &&
-                !/(\d{4}\s*[-–—]\s*\d{4})/i.test(trimmed) &&
-                !/(CGPA|GPA|Percentage|%)/i.test(trimmed)) {
-              university = trimmed;
-            }
+            return !/\b(B\.Tech|B\.E\.|B\.Sc\.|M\.Tech|M\.B\.A|Bachelor|Master|Degree)\b/i.test(trimmed) &&
+                   !/(\d{4}\s*[-–—]\s*\d{4})/i.test(trimmed) &&
+                   !/(CGPA|GPA|Percentage|%)/i.test(trimmed) &&
+                   !/^\d+\.\d+%?$/.test(trimmed) && // Exclude standalone CGPA numbers
+                   trimmed.length > 5; // Must be substantial length
           });
-          
-          // If we still don't have university, use the longest line that's not degree/duration/cgpa
-          if (!university) {
-            const candidates = entryLines.filter(line => {
-              const trimmed = line.trim();
-              return !/\b(B\.Tech|B\.E\.|B\.Sc\.|M\.Tech|M\.B\.A|Bachelor|Master|Degree)\b/i.test(trimmed) &&
-                     !/(\d{4}\s*[-–—]\s*\d{4})/i.test(trimmed) &&
-                     !/(CGPA|GPA|Percentage|%)/i.test(trimmed) &&
-                     !/^\d+\.\d+%?$/.test(trimmed) && // Exclude standalone CGPA numbers
-                     trimmed.length > 5; // Must be substantial length
-            });
-            if (candidates.length > 0) {
-              university = candidates.reduce((a, b) => a.length > b.length ? a : b).trim();
-            }
+          if (candidates.length > 0) {
+            university = candidates.reduce((a, b) => a.length > b.length ? a : b).trim();
           }
-          
-          // If we still don't have degree, check if any remaining line looks like a degree
-          if (!degree) {
-            const remaining = entryLines.find(line => {
-              const trimmed = line.trim();
-              return trimmed !== university && trimmed !== duration && trimmed !== cgpa;
-            });
-            if (remaining && /\b(in|of|Computer|Science|Engineering|Technology|Business|Administration)\b/i.test(remaining)) {
-              degree = remaining.trim();
-            }
+        }
+        
+        // If we still don't have degree, check if any remaining line looks like a degree
+        if (!degree) {
+          const remaining = entryLines.find(line => {
+            const trimmed = line.trim();
+            return trimmed !== university && trimmed !== duration && trimmed !== cgpa;
+          });
+          if (remaining && /\b(in|of|Computer|Science|Engineering|Technology|Business|Administration)\b/i.test(remaining)) {
+            degree = remaining.trim();
           }
-          
-          // Render education entry - handle different layouts generically
-          return (
-            <div key={`edu-entry-${entryIdx}`} style={{ marginTop: entryIdx > 0 ? sectionSpacing : '0', marginBottom: textMargin }}>
-              {/* First line: University (bold) - only show if university exists */}
-              {university && (
-              <div style={{ 
-                fontSize: '10pt', 
-                fontWeight: 700, 
-                color: '#000000', 
-                  marginBottom: (degree || duration || cgpa) ? '0.1rem' : '0', 
-                lineHeight: smallLineHeight, 
-                  fontFamily: 'Helvetica, Arial, sans-serif'
-              }}>
-                  {university}
-              </div>
-              )}
-              
-              {/* Second line: Degree (regular, left) | Duration (regular, right) - only show if degree exists */}
-              {degree && (
+        }
+        
+        // Render education entry - handle different layouts generically
+        return (
+          <div key={`edu-entry-${entryIdx}`} style={{ marginTop: entryIdx > 0 ? sectionSpacing : '0', marginBottom: textMargin }}>
+            {/* First line: University (bold) - only show if university exists */}
+            {university && (
+            <div style={{ 
+              fontSize: '10pt', 
+              fontWeight: 700, 
+              color: '#000000', 
+                marginBottom: (degree || duration || cgpa) ? '0.1rem' : '0', 
+              lineHeight: smallLineHeight, 
+                fontFamily: 'Helvetica, Arial, sans-serif'
+            }}>
+                {university}
+            </div>
+            )}
+            
+            {/* Second line: Degree (regular, left) | Duration (regular, right) - only show if degree exists */}
+            {degree && (
+            <div style={{ 
+              fontSize: '10pt', 
+              fontWeight: 400, 
+              color: '#000000', 
+                marginBottom: (duration && duration !== degree) || cgpa ? '0.1rem' : '0', 
+              lineHeight: smallLineHeight, 
+              fontFamily: 'Helvetica, Arial, sans-serif',
+              display: 'flex',
+              justifyContent: 'space-between',
+                alignItems: 'flex-start'
+            }}>
+                <span style={{ flex: 1 }}>{degree}</span>
+                {duration && duration !== degree && <span style={{ whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>{duration}</span>}
+            </div>
+            )}
+            
+            {/* Third line: CGPA (if exists and not already shown) */}
+            {cgpa && (
               <div style={{ 
                 fontSize: '10pt', 
                 fontWeight: 400, 
                 color: '#000000', 
-                  marginBottom: (duration && duration !== degree) || cgpa ? '0.1rem' : '0', 
+                marginBottom: '0', 
                 lineHeight: smallLineHeight, 
-                fontFamily: 'Helvetica, Arial, sans-serif',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start'
+                fontFamily: 'Helvetica, Arial, sans-serif'
               }}>
-                  <span style={{ flex: 1 }}>{degree}</span>
-                  {duration && duration !== degree && <span style={{ whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>{duration}</span>}
+                {cgpa}
               </div>
-              )}
-              
-              {/* Third line: CGPA (if exists and not already shown) */}
-              {cgpa && (
-                <div style={{ 
-                  fontSize: '10pt', 
-                  fontWeight: 400, 
-                  color: '#000000', 
-                  marginBottom: '0', 
-                  lineHeight: smallLineHeight, 
-                  fontFamily: 'Helvetica, Arial, sans-serif'
-                }}>
-                  {cgpa}
-                </div>
-              )}
-            </div>
-          );
-        });
-      }
+            )}
+          </div>
+        );
+      });
+    }
       
       const formattedLines = [];
       

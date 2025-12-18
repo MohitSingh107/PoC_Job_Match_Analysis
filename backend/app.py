@@ -174,73 +174,108 @@ EXTRACT_TEXT_DATA = {}
 # HELPER FUNCTIONS - Document Processing
 # ============================================================================
 
+import fitz  # PyMuPDF
+import re
+
 def extract_text_from_pdf(file_stream):
     """
-    Extract text AND embedded hyperlinks from a PDF.
-    Returns: {"text": str, "links": [{"url": ..., "text": ...}, ...]}
+    Extract text and All links (embedded + plain-text).
+    Returns:
+    {
+        "text": str,
+        "links": [
+            {
+                "url": str,
+                "text": str
+            }
+        ]
+    }
     """
     try:
         pdf_bytes = file_stream.read()
         file_stream.seek(0)
+
         pdf_document = fitz.open(stream=pdf_bytes, filetype="pdf")
+
         text_parts = []
         links = []
-        
+
         for page_num in range(len(pdf_document)):
             page = pdf_document[page_num]
-            
-            # -------- Text Extraction (existing behavior) --------
+
+            # -------- Text Extraction (unchanged logic) --------
             text_dict = page.get_text("dict")
             blocks = []
+
             for block in text_dict.get("blocks", []):
-                if "lines" in block:
-                    for line in block["lines"]:
-                        line_text = ""
-                        for span in line.get("spans", []):
-                            span_text = span.get("text", "").strip()
-                            if span_text:
-                                line_text += span_text + " "
-                        if line_text.strip():
-                            blocks.append(line_text.strip())
+                if "lines" not in block:
+                    continue
+                for line in block["lines"]:
+                    line_text = ""
+                    for span in line.get("spans", []):
+                        span_text = span.get("text", "").strip()
+                        if span_text:
+                            line_text += span_text + " "
+                    if line_text.strip():
+                        blocks.append(line_text.strip())
+
             page_text = "\n".join(blocks)
             if page_text:
                 text_parts.append(page_text)
-            
-            # -------- Link Extraction --------
+
+            # -------- Embedded Hyperlink Extraction --------
             for link in page.get_links():
                 uri = link.get("uri")
                 if not uri:
                     continue
-                # Restrict to relevant domains/types
+
                 lower_uri = uri.lower()
                 if not (
-                    "linkedin.com" in lower_uri
-                    or "github.com" in lower_uri
-                    or "kaggle.com" in lower_uri
+                    lower_uri.startswith("http")
                     or lower_uri.startswith("mailto:")
                 ):
-                    # Also allow generic project links if https present
-                    if not lower_uri.startswith("http"):
-                        continue
+                    continue
+
                 anchor_text = ""
                 if link.get("from"):
                     try:
                         anchor_text = page.get_text("text", clip=link["from"]).strip()
                     except Exception:
                         anchor_text = ""
+
                 links.append({
-                    "url": uri,
+                    "url": uri.strip(),
                     "text": anchor_text
                 })
-        
+
+            # -------- Plain-text URL Extraction --------
+            text_urls = re.findall(r'https?://\S+', page_text)
+            for url in text_urls:
+                links.append({
+                    "url": url.strip().rstrip(").,]"),
+                    "text": ""
+                })
+
         pdf_document.close()
+
+        # -------- Deduplicate Links --------
+        unique_links = {}
+        for link in links:
+            key = link["url"].lower()
+            if key not in unique_links:
+                unique_links[key] = link
+            else:
+                # Prefer link with anchor text
+                if not unique_links[key]["text"] and link["text"]:
+                    unique_links[key]["text"] = link["text"]
+
         return {
             "text": "\n".join(text_parts).strip(),
-            "links": links
+            "links": list(unique_links.values())
         }
+
     except Exception as e:
         raise Exception(f"Error reading PDF: {str(e)}")
-
 
 def extract_text_from_docx(file_stream):
     """Extract text from DOCX file"""
@@ -563,8 +598,7 @@ def load_curriculum_json():
 
 def prompt_1_strategy_generation(gap_analysis, curriculum_data):
     """
-    PROMPT 1: Strategy Generation (REWORKED)
-    Variance Reduction: 30% → 8%
+    PROMPT 1: Strategy Generation
     """
     system_message = """
 # Role
@@ -618,14 +652,23 @@ Using projects_analysis:
 - These are non-DA projects that add no value
 
 ### 2b. Add Curriculum Case Studies as Projects
-- Add case studies from curriculum modules that (equivalent to the length of projects_to_remove field):
-  - Support skills being added/enhanced
-  - Are most relevant to user_level (Fresher/Intermediate/Experienced)
-- For each case study, create a project entry:
-  - Project Name: Use case study name from curriculum_data
-  - Technologies: List relevant skills from that module
-  - Description: 2-3 sentences about what analysis was done
-- Output: projects_to_add = [{"name": "US Healthcare Dataset Analysis", "module": "Introduction to Data Analytics and Excel", "technologies": ["Excel", "Power Query"], "description": "..."}]
+Rules:
+- Count removed projects: len(projects_to_remove)
+- Add EXACTLY that many case studies from curriculum
+- Select case studies that:
+ - Support skills being added/enhanced
+ - Match user_level complexity
+ - Are most relevant to DA roles
+
+Example:
+- If projects_to_remove = ["Project A", "Project B"] (count=2)
+- Then projects_to_add must have EXACTLY 2 entries
+
+For each case study:
+- name: Use exact case study name from curriculum
+- module: Module name where case study is from
+- technologies: Skills from that module
+- description: 2-3 sentences about the analysis
 
 ### 2c. Keep Relevant Projects
 - Retain all projects from projects_to_keep with original description
@@ -779,152 +822,164 @@ For each module used:
 
 def prompt_2_resume_writing(resume_data, strategy, gap_analysis):
     """
-    PROMPT 2: Resume Writing (REWORKED)
-    Variance Reduction: 30% → 10%
+    PROMPT 2: Resume Writing
     """
     system_message = """
-# Role
-You are an ATS resume writer specializing in Data Analytics roles.
+    # Role
+    You are an ATS resume writer specializing in Data Analytics roles.
 
-# Task
-Generate an improved ATS-friendly resume utilizing only the provided improvement strategy, original user resume and Curriculum Mapping.
+    # Task
+    Generate an improved ATS-friendly resume utilizing only the provided improvement strategy, original user resume and Curriculum Mapping.
 
-# Template Structure
-Follow this ATS-friendly structure:
+    # Link Usage Rules (CRITICAL)
+    You are provided with a list of embedded links extracted from the resume.
+    Each link contains:
+    - url
+    - anchor text (may be empty)
 
-## HEADER SECTION
-[FULL NAME - from original, all caps]
-Email | Phone | Location | LinkedIn | GitHub 
-[Only use the contact info present in the original resume and embedded links, remove the contact info that is not present in the original resume]
+    STRICT RULES:
+    1. NEVER invent, modify, shorten, or expand any URL.
+    2. Use ONLY the provided links.
+    3. If the purpose of a link is unclear, keep it as plain text (do not force placement).
+    4. Determine link purpose ONLY using:
+    - anchor text
+    - nearby resume content
+    5. If confidence is low, include the link only in the HEADER (if profile link) or CERTIFICATIONS (if labeled as "Certificate").
 
-## PROFESSIONAL SUMMARY
-2 sentences maximum: [Professional Title based on user_level] with expertise in [top 2-4 skills including enhanced ones], experienced in [domain/projects], seeking to leverage [skills] for [DA role type].
+    PLACEMENT RULES:
+    - LinkedIn / GitHub profile links → HEADER
+    - Project repository links → under the corresponding project
+    - Certificate links → CERTIFICATIONS section
+    - Unknown or irrelevant links → EXCLUDE from resume
 
-## TECHNICAL SKILLS
-• **Programming & Languages:** [list skills with enhancements grouped]
-• **Data Visualization:** [Power BI, Tableau, Excel, etc.]
-• **Other Tools:** [Jupyter, etc.]
+    # Template Structure
+    Follow this ATS-friendly structure:
 
-{CONDITIONAL_SECTION - see decision tree below}
+    ## HEADER SECTION
+    [FULL NAME - from original, all caps]
+    Email | Phone | Location | LinkedIn (URL if present) | GitHub (URL if present) 
+    [Only use the contact info present in the original resume and embedded links, remove the contact info that is not present originally]
 
-## EDUCATION
-[Only include graduation or post graduation details from the resume, ignore the school details]
+    ## PROFESSIONAL SUMMARY
+    2 sentences maximum: [Professional Title based on user_level] with expertise in [top 2-4 skills including enhanced ones], experienced in [domain/projects], seeking to leverage [skills] for [DA role type].
 
-## PROJECTS
-[Only Add projects_to_keep from the original resume]
-[Only Add projects_to_add from the improvement strategy]
+    ## TECHNICAL SKILLS
+    • **Programming & Languages:** [list skills with enhancements grouped]
+    • **Data Visualization:** [Power BI, Excel, etc.]
+    • **Soft Skills:** Communication, Teamwork, Problem Solving, Time Management, etc.
+    • **Other Tools:** [Jupyter, etc.]
 
-## CERTIFICATIONS
-[All original certifications with certificate link placeholder text (if present)]
-[IF no Data Analytics certification exists: Add "Data Analytics | Coding Ninjas | {CURRENT_YEAR}"]
+    {CONDITIONAL_SECTION - see decision tree below}
 
----
+    ## EDUCATION
+    **CRITICAL RULES:**
+    1. Include ONLY graduation (Bachelor's) OR post-graduation (Master's) education
+    2. EXCLUDE: High school, Class X, Class XII, school education
+    3. Format per entry:
+    Line 1: University/College name (bold)
+    Line 2: Degree name | Year range
+    Line 3: CGPA/GPA (if present)
 
-## Professional Experience Decision Tree
+    ## PROJECTS
+    - First add projects according to the projects_to_keep field from the original resume, if empty then skip this step.
+    - Secondly add projects according to the projects_to_add field from the improvement strategy, if empty then skip this step.
 
-**STEP 1: Check User Level**
-IF user_level = "Fresher" → SKIP this entire section, go directly to Education
+    ## CERTIFICATIONS
+    - List all original certifications.
+    - If a certificate link is provided, append it in parentheses exactly as given.
+    - Example: Data Analytics Certificate – Coding Ninjas (certificate link)
+    - If no Coding Ninjas Data Analytics certification exists in the original resume:
+     - At the end add: "Data Analytics | Coding Ninjas | {CURRENT_YEAR}" 
 
-**STEP 2: Check if Original Has Work Experience**
-Look for sections: "Experience", "Work Experience", "Professional Experience", "Employment"
-IF not found → SKIP section, go to Education
+    ## Professional Experience Decision Tree
 
-**STEP 3: Check if DA-Related**
-DA-Related roles:
-- Data Analyst, Business Analyst, BI Analyst, Analytics Engineer
-- Data Scientist, SQL Developer, Database Analyst
-- Technical roles with quantitative analysis (e.g., Software Engineer with A/B testing, metrics)
+    **STEP 1: Check User Level**
+    IF user_level = "Fresher" → SKIP this entire section, go directly to Education
 
-NOT DA-Related:
-- Pure non-technical (Sales without analytics, Marketing without data, HR)
-- Service roles (Customer service, retail, hospitality)
-- Admin roles without analytics
+    **STEP 2: Check if Original Has Work Experience**
+    Look for sections: "Experience", "Work Experience", "Professional Experience", "Employment"
+    IF not found → SKIP section, go to Education
 
-**STEP 4: Final Decision**
-IF (user_level != "Fresher") AND (original has work experience) AND (role is DA-related):
-  - INCLUDE Professional Experience section (keep original content, add keywords naturally)
-ELSE:
-  - SKIP section entirely
+    **STEP 3: Check if DA-Related**
+    DA-Related roles:
+    - Data Analyst, Business Analyst, BI Analyst etc
+    - Data Scientist, SQL Developer, Database Analyst
+    - Technical roles (e.g., Software Engineer)
 
----
+    NOT DA-Related:
+    - Pure non-technical (Sales without analytics, Marketing without data, HR)
+    - Service roles (Customer service, retail, hospitality)
+    - Admin roles without analytics
 
-## TECHNICAL SKILLS FORMAT (MANDATORY)
+    **STEP 4: Final Decision**
+    IF (user_level != "Fresher") AND (original has work experience) AND (role is DA-related):
+    - INCLUDE Professional Experience section (keep original content, add keywords naturally)
+    ELSE:
+    - SKIP section entirely
 
-Use EXACTLY these four categories (no more, no less):
+    ## TECHNICAL SKILLS FORMAT (MANDATORY)
 
-**Programming & Languages:** Python (sub-skills), SQL (sub-skills), R (if applicable)
+    • **Programming & Languages:** [list skills with enhancements grouped]
+    • **Data Visualization:** [Power BI, Excel, etc.]
+    • **Soft Skills:** Communication, Teamwork, Problem Solving, Time Management, etc.
+    • **Other Tools:** [Jupyter, etc.]
 
-**Database Management:** MySQL, PostgreSQL, SQL Server, etc.
+    **CRITICAL:**
+    - Use these EXACT category names with bold formatting: **Category Name:**
+    - Do NOT combine categories
+    - Do NOT create new categories beyond the five mentioned above
 
-**Data Visualization & BI:** Power BI (sub-skills), Tableau, Excel (sub-skills)
-  - Include: All visualization and BI tools
-  - Group with parentheses for enhancements
+    ## Project Description Templates
 
-**Soft Skills:** Communication, Teamwork, Problem Solving, Time Management, etc.
-  - Include: rely on the original resume for soft skills and if not present then add them based on the user_level.
+    **Structure per project:**
+    - For original projects retain original details and use the following format:
+     - Format: Project Title | Technologies | Link | Date (skip fields if not present)
+     - Project Description: Retain original description.
+    - For curriculum case studies, use the following format:
+     - Format: Project Title | Technologies | (skip fields if not present)
+     - Project Description: Bullet points (3 points) highlighting analysis, Technologies & Techniques used, outcomes, etc.
 
-**Other Tools:** Jupyter Notebook, Git, VS Code, etc.
-  - Include: Development tools, IDEs, version control
-  - List comma-separated
+    **CRITICAL:**
+    - NO invented metrics ("processed 50,000 records" if not in original)
+    - NO invented outcomes ("increased revenue 15%" if not stated)
+    - Use case study details if from curriculum
+    - Use original details if from user's resume
+    - For improving the skills and projects rely only on the improvement strategy provided.
 
-**CRITICAL:**
-- Use these EXACT category names with bold formatting: **Category Name:**
-- Do NOT use category names from the original resume
-- Do NOT combine categories (e.g., "Database Management & Querying" → split to "Programming & Languages" for SQL, "Database Management" for MySQL)
-- Do NOT create new categories beyond these four
+    ## FINAL VERIFICATION CHECKLIST
 
----
+    Before outputting resume, verify:
 
-## Project Description Templates
+    ## Professional Experience:
+    - Fresher → section DOES NOT exist
+    - Non-Fresher → included only if original had DA-related role
 
-**Structure per project:**
-For original projects:
-- retain all the original details: project name, description, project links placeholder text, dates
-For curriculum case studies:
-Format: [Project Name]
-- Bullet points description (3 points) highlighting analysis, Technologies & Techniques used, outcomes, etc.
+    ## Education:
+    - Section name is "Education" (NOT "Academic Details")
+    - Exactly copy the graduation or post graduation details from the resume, ignore the school details.
 
-**CRITICAL:**
-- NO invented metrics ("processed 50,000 records" if not in original)
-- NO invented outcomes ("increased revenue 15%" if not stated)
-- Use case study details if from curriculum
-- Use original details if from user's resume
-- For improving the skills and projects rely only on the improvement strategy provided.
+    ## Technical Skills:
+    - NO arrows (→) anywhere
+    - Skills grouped: "Python (NumPy, Pandas)" not separate
+    - Categories bolded: **Programming:**
+    - skills and projects should be based on the improvement strategy provided.
 
----
+    ## Projects:
+    - NO invented metrics/outcomes
+    - All links placed correctly like the original resume
+    - 3 bullets per project using templates
+    - Removed projects NOT included
 
-## FINAL VERIFICATION CHECKLIST
+    ## Contact Info:
+    - All original info preserved
+    - All links preserved exactly
 
-Before outputting resume, verify:
+    ## No extra text or sections or commentary is present in the resume, if found remove it.
 
-## Professional Experience:
-  - Fresher → section DOES NOT exist
-  - Non-Fresher → included only if original had DA-related role
-
-## Education:
-  - Section name is "Education" (NOT "Academic Details")
-  - Exactly copy the graduation or post graduation details from the resume, ignore the school details.
-
-## Technical Skills:
-  - NO arrows (→) anywhere
-  - Skills grouped: "Python (NumPy, Pandas)" not separate
-  - Categories bolded: **Programming:**
-  - skills and projects should be based on the improvement strategy provided.
-
-## Projects:
-  - NO invented metrics/outcomes
-  - 3 bullets per project using templates
-  - Removed projects NOT included
-
-## Contact Info:
-  - All original info preserved
-  - All links preserved exactly
-
-## No extra text or sections or commentary is present in the resume, if found remove it.
-
-# Output
-Generate complete resume text only (no JSON, no reasoning).
-Use plain text format, NOT markdown code blocks."""
+    # Output
+    - Generate complete resume text only (no JSON, no reasoning).
+    - Use plain text format, NOT markdown code blocks.
+"""
 
     resume_text_content = resume_data.get('text', '')
     resume_links = resume_data.get('links', [])
@@ -939,36 +994,38 @@ Use plain text format, NOT markdown code blocks."""
     
     user_prompt = f"""Write improved Data Analytics resume.
 
-## Original Resume
-{resume_text_content}
+    ## Original Resume
+    {resume_text_content}
 
-## Embedded Links (preserve exactly)
-{json.dumps(resume_links, indent=2)}
+    ## Embedded Links (USE EXACTLY AS PROVIDED)
+    Each link contains a URL and optional anchor text.
+    You must decide placement using the Link Usage Rules.
+    {json.dumps(resume_links, indent=2)}
 
-## Improvement Strategy
+    ## Improvement Strategy
 
-**Skills to Enhance:**
-{json.dumps(skills_enhance, indent=2)}
+    **Skills to Enhance:**
+    {json.dumps(skills_enhance, indent=2)}
 
-**Skills to Add:**
-{json.dumps(skills_add, indent=2)}
+    **Skills to Add:**
+    {json.dumps(skills_add, indent=2)}
 
-**Projects to Remove:**
-{json.dumps(projects_remove)}
+    **Projects to Remove:**
+    {json.dumps(projects_remove)}
 
-**Projects to Keep:**
-{json.dumps(projects_keep)}
+    **Projects to Keep:**
+    {json.dumps(projects_keep)}
 
-**Projects to Add:**
-{json.dumps(projects_add, indent=2)}
+    **Projects to Add:**
+    {json.dumps(projects_add, indent=2)}
 
-**Curriculum Mapping:**
-{json.dumps(strategy.get('curriculum_mapping', {}), indent=2)}
+    **Curriculum Mapping:**
+    {json.dumps(strategy.get('curriculum_mapping', {}), indent=2)}
 
-## User Context
-- User Level: {user_level}
-- Current Year: {CURRENT_YEAR}
-"""
+    ## User Context
+    - User Level: {user_level}
+    - Current Year: {CURRENT_YEAR}
+    """
 
     response = client.chat.completions.create(
         model="gpt-4.1-mini",
@@ -976,8 +1033,8 @@ Use plain text format, NOT markdown code blocks."""
             {"role": "system", "content": system_message},
             {"role": "user", "content": user_prompt}
         ],
-        temperature=0.0,  # Lower for more consistency
-        max_tokens=2000
+        temperature=0.1,  # Lower for more consistency
+        max_tokens=2500
     )
     
     improved_text = response.choices[0].message.content.strip()

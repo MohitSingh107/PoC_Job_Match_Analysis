@@ -1,69 +1,45 @@
 {
   "original": {
-    "resume_text": "MAHIMA MALHOTRA\nEmail: mahima28.malhotra@gmail.com\nMob.: 9899829190\nA dedicated,hardworking,team-oriented professional capable of working cross-functionally and cross-culturally.Very fast  learner\nand confident towards delivering the best outputs for Organizational growth. Have good analytical and decision making skills with\ncritical thinking capabilities in high pressure environment.\nACADEMIC DETAILS\nCourse\nInstitute / Organization\nBoard /\nUniversity\nYear\n% age/CGPA\nB.Tech (Instrumentation\nand Control Engineering)\nBharati Vidyapeeth’s College of  Engineering,\nNew Delhi\nGGSIPU\n2016-20\n82.9%\nClass XII\nRukmini Devi Public School,  New Delhi\nCBSE\n2015-16\n88.47%\nClass X\nRukmini Devi Public School,  New Delhi\nCBSE\n2013-14\n10.0\nWORK EXPERIENCE\\TRAININGS\nNov 2020 – Present Instrument and Controls Engineer – Mcdermott, Gurugram\n\nWorking on an EPC based Project- Polyethylene Plant, Borstar Bay3, Texas.\n\nConsiderable knowledge of Industrial Instruments,Control Systems,Signals,Wiring and\nLoops.\n\nWorked on Instrument Index,P&IDs , Datasheets (technical specification for instruments), Loop\nDiagrams.\n\nWorked on Softwares like Smart plant Instrumentation , AutoCad.\nJune 2019- July 2019     Industrial training – Indian Oil Corporation limited (Pipelines Division) – Noida\n\nReviewed P&IDs\n\nIndustrial Instruments functionalities, working and Control System Monitoring.\n\nKnowledge of SCADA and PLC systems\nJune 2018-July 2018 Machine Learning and Artificial Intelligence Training – Eckovation, New Delhi\n\nImage Classification Using the concept of Convolutional Neural Networks (deep learning)\nJune 2018-Sept 2018     Java Training - Coding Ninjas, New Delhi\nTECHNICAL SKILLS\n Technical Skills           : Java,SQL,Python,Machine Learning,Industrial Instrumentation,Control Systems\n Software Knowledge : Smart Plant Instrumentation, AutoCad, Eclipse IDE, MATLAB, MS Excel,Jupyter\nENGINEERING PROJECTS\n\nPneumonia detection from Chest X-ray images using Deep Learning.\n\nRelative localization using the concept of  Swarm Robotics .\n\nSmart Urban Farming – Automatic Rooftop Using Arduino Uno\nCERTIFICATIONS\n Certification in Industrial Instrumentation  – Indian Oil Corporation Limited\n Certification in JAVA - Coding Ninjas\n Certification in Machine Learning and Artificial Intelligence - Eckovation\n Certification for Event Coordinator – Industrial Society for automation\nPERSONAL INTERESTS\n\nLikes to play football, badminton and chess\n\nEnjoy cooking and like to explore different cafes and food.\n\nBinge watch Thriller movies and web series\n\nLove cycling, travelling and trekking.",
-    "job_relevance_score": 55,
-    "ats_score": 70,
+    "resume_text": "MOHAMMED YAHYA HUSSAIN\nData Analyst - 2 Years\nÑ Karnataka, India  +91-7349033579 # mohammedyahyahussain1998@gmail.com ï Linkedin Profile § GitHub Profile\nPROfiLE SUMMARY\nSeasoned Data Analyst with 2+ years experience in Python, SQL, and Power BI , specializing in EDA, KPI reporting, and\nvisualization to optimize data workflow for stakeholders to help in decision-making and enhance data-driven business\nperformance .\nEXPERIENCE\nSparklex Technologies\nAug 2023 – Present\nData Analyst\nBangalore, Karnataka\n• Monthly revenue trends revealed flat growth despite rising subscriptions, prompting an investigation into churn drivers and\ncustomer profitability.\n• Unified 4+ disparate datasets billing, usage, customer, support using SQL — leveraging joins, CTEs, and window functions —\nimproving data availability and reducing query time by.\n• Applied churn logic inactive >90 days, repeated late payments and performed data validation in Excel through pivots and\nformulas, improving confidence in the analysis.\n• Built 3 interactive Power BI dashboards with advanced DAX measures for churn percentage, Average Revenue Per User ARPU,\nand Customer Lifetime Value CLV, reducing dependency on manual Excel reports and accelerating decision-making.\n• Applied Python pandas, numpy, matplotlib to automate simple data preparation tasks and generate exploratory charts,\nproviding quick checks and visual insights that supported the main Excel and Power BI reporting.\n• Presented analysis of churn patterns and customer segments, providing clarity on key risk factors and contributing to\nretention improvement efforts.\n• Participated in regular meetings to resolve the issue and offered technical support to the team.\nPROJECTS\nPhonePe Digital Payments Dataset Python | GitHub\nSept 2025\n• Consolidated 2018–2021 multi-sheet payment datasets, applied Pandas/NumPy, ensuring standardized structure and\nreliable insights.\n• Evaluated state and district payment behavior, applied SQL-style grouping, uncovering demographic patterns and adoption\ncorrelations.\n• Automated Matplotlib visualizations, generated dynamic charts, enabling stakeholders to identify growth opportunities and\nmitigate churn.\nSocial Media Ad Campaign Performance | Power BI | Github\nSept 2025\n• Designed Power BI dashboard integrating 213M impressions data, enabling CTR and conversion insights across\ndemographics.\n• Analyzed demographic spend patterns using DAX, uncovering male 30–34 efficiency and female 45–49 inefficiency for budget\noptimization.\n• Exposed funnel drop-offs causing negative ROI , recommending spend reallocation and CTR improvements for campaign\nperformance.\nE Commerce | SQL | Github\nAug 2025\n• Analyzed 100K+ transactional records by designing complex SQL queries , revealing customer purchase trends .\n• Performed RFM(Recency, Frequency, and Monetar ) analysis for segmentation, classifying customers , and identifying churn\nrisks to guide proactive interventions.\n• Delivered actionable insights through SQL-driven retention strategies, boosting repeat purchases and enhancing\nengagement metrics significantly .\nCPI Inflation | Advanced Excel | Github\nJuly 2025\n• Analyzed CPI drivers by grouping categories, applied statistical formulas, delivered accurate contribution insights.\n• Developed automated Excel dashboards, integrated SUMIFS, VLOOKUP, pivots, enabled efficient data-driven comparisons.\n• Identified dominant contributors forecasted trends with models, supported strategic planning and inventory adjustments.\nKEY SKILLS\nData Analysis & Programming : Python (Pandas, NumPy, Matplotlib, Seaborn), Javascript, Excel, EDA, Statistical Analysis, Insight\nGeneration\nDatabase Management & Querying : SQL, MySQL, Joins, Aggregations, Subqueries, Windows Function & CTE’s\nBusiness Intelligence & Reporting : Power BI, Excel Dashboard, KPI Reporting , Reporting Automation\nSoft Skills & Tools : Analytical Thinking, Problem-Solving, Attention to Detail, Data Storytelling, Communication & Presentation\nSkills\nEDUCATION\nVisvesvaraya Technological University (VTU), Karnataka\n2018 – 2023\nBE in Computer Science\nCGPA: 7.47\nTRAINING AND CERTIfiCATIONS\nCoding Ninjas\n2024 – 2025\nData Analytics\nCertificate Link",
+    "job_relevance_score": 85,
+    "ats_score": 90,
     "has_skills": [
-      "Java",
-      "SQL",
       "Python",
-      "Machine Learning",
-      "Excel",
-      "MATLAB",
-      "MS Excel",
-      "Jupyter"
-    ],
-    "missing_skills": [
+      "SQL",
+      "MySQL",
       "Power BI",
+      "Excel",
       "NumPy",
       "Pandas",
       "Matplotlib",
-      "Seaborn"
+      "Seaborn",
+      "EDA",
+      "DAX"
     ],
-    "user_level": "Fresher",
+    "missing_skills": [
+      "Statistics"
+    ],
+    "user_level": "Intermediate",
     "level_reasoning": "",
-    "analysis_summary": "The resume demonstrates a solid technical foundation and relevant projects for a fresher but misses critical data analytics tools and libraries, which impacts job relevance. ATS compatibility is good but can be enhanced with consistent formatting and clearer section headers."
+    "analysis_summary": "The resume effectively demonstrates intermediate-level data analytics skills with strong project experience and quantification, though it lacks some growing market skills like ETL, AWS, and advanced statistics. The format is ATS-optimized, supporting good keyword parsing and readability."
   },
   "improved": {
-    "resume_text": "MAHIMA MALHOTRA  \nmahima28.malhotra@gmail.com | 9899829190 | New Delhi  \n\nPROFESSIONAL SUMMARY  \nFresher with foundational knowledge in Python (NumPy, Pandas, Matplotlib & Seaborn), Advanced SQL, and Advanced Excel (Power Query, Data Transformation). Completed projects in deep learning and data visualization, seeking to leverage analytical and technical skills in a Data Analytics role.\n\nTECHNICAL SKILLS  \n• Programming & Languages: Python (NumPy, Pandas, Matplotlib, Seaborn), Advanced SQL (CTEs, Window Functions, Stored Procedures)  \n• Database Management: SQL  \n• Data Visualization & BI: Power BI, Advanced Excel (Power Query, Data Transformation)  \n• Soft Skills: Teamwork, Critical Thinking, Analytical Skills, Fast Learner  \n• Other Tools: Jupyter Notebook, MATLAB, AutoCad, Eclipse IDE  \n\nEDUCATION  \nB.Tech in Instrumentation and Control Engineering  \nBharati Vidyapeeth’s College of Engineering, New Delhi | GGSIPU | 2016-2020 | 82.9%  \n\nPROJECTS  \nPneumonia detection from Chest X-ray images using Deep Learning  \n- Developed a deep learning model for image classification to detect pneumonia from chest X-ray images.  \n- Utilized convolutional neural networks (CNN) for feature extraction and classification.  \n- Applied Python libraries and frameworks for model training and evaluation.  \n\nE-com Orders  \n- Analyzed e-commerce order data to create interactive dashboards using Power BI.  \n- Focused on sales trends, customer segmentation, and key performance indicators to drive business insights.  \n- Employed data cleaning, DAX functions, and report creation techniques.  \n\nNational Air Quality  \n- Performed data cleaning and transformation on national air quality datasets using Excel and Power Query.  \n- Conducted univariate and bivariate analysis to identify pollution patterns.  \n- Applied advanced Excel operations for data manipulation and visualization.  \n\nCERTIFICATIONS  \nCertification in Industrial Instrumentation – Indian Oil Corporation Limited  \nCertification in JAVA – Coding Ninjas  \nCertification in Machine Learning and Artificial Intelligence – Eckovation  \nCertification for Event Coordinator – Industrial Society for Automation  \nData Analytics | Coding Ninjas | 2026",
-    "job_relevance_score": 90,
-    "ats_score": 95,
+    "resume_text": "MOHAMMED YAHYA HUSSAIN  \nmohammedyahyahussain1998@gmail.com | +91-7349033579 | Karnataka, India | https://linkedin.com/in/mohammed-yahyahussain-551907250 | https://github.com/Mohammedyahyahussain  \n\nPROFESSIONAL SUMMARY  \nData Analyst with 2+ years of experience in Python, SQL, Power BI, and Statistics, specializing in exploratory data analysis, KPI reporting, and visualization to optimize data workflows and support data-driven decision-making in business environments. Seeking to leverage analytical and statistical skills for impactful data analytics roles.  \n\nTECHNICAL SKILLS  \n• Programming & Languages: Python (Pandas, NumPy, Matplotlib, Seaborn), SQL, MySQL, JavaScript  \n• Data Visualization: Power BI, Excel (Dashboards, Pivot Tables)  \n• Soft Skills: Analytical Thinking, Problem Solving, Attention to Detail, Data Storytelling, Communication, Presentation  \n• Other Tools: Excel (Advanced Formulas, VLOOKUP, SUMIFS), Jupyter Notebook  \n\nEXPERIENCE  \nSparklex Technologies | Bangalore, Karnataka  \nData Analyst | Aug 2023 – Present  \n- Investigated monthly revenue trends revealing flat growth despite rising subscriptions, leading to churn driver and customer profitability analysis.  \n- Unified 4+ disparate datasets (billing, usage, customer, support) using SQL joins, CTEs, and window functions, improving data availability and reducing query time.  \n- Applied churn logic (inactive >90 days, repeated late payments) and performed data validation in Excel with pivots and formulas, enhancing analysis confidence.  \n- Developed 3 interactive Power BI dashboards with advanced DAX measures for churn percentage, ARPU, and CLV, reducing manual reporting and accelerating decision-making.  \n- Automated data preparation tasks and generated exploratory charts using Python (pandas, numpy, matplotlib), providing quick visual insights supporting Excel and Power BI reports.  \n- Presented churn pattern and customer segment analyses, clarifying key risk factors and contributing to retention improvement initiatives.  \n- Participated in cross-functional meetings to resolve data issues and provided technical support to the team.  \n\nPROJECTS  \nPhonePe Digital Payments Dataset | Python | GitHub: https://github.com/Mohammedyahyahussain/PhonePe-Python | Sept 2025  \n- Consolidated 2018–2021 multi-sheet payment datasets using Pandas and NumPy, ensuring standardized structure and reliable insights.  \n- Evaluated state and district payment behavior with SQL-style grouping, uncovering demographic patterns and adoption correlations.  \n- Automated Matplotlib visualizations to generate dynamic charts, enabling stakeholders to identify growth opportunities and mitigate churn.  \n\nSocial Media Ad Campaign Performance | Power BI | Github: https://github.com/Mohammedyahyahussain/Social-Media-Ad-Campaign-PBI | Sept 2025  \n- Designed Power BI dashboard integrating 213M impressions data, enabling CTR and conversion insights across demographics.  \n- Analyzed demographic spend patterns using DAX, uncovering male 30–34 efficiency and female 45–49 inefficiency for budget optimization.  \n- Identified funnel drop-offs causing negative ROI, recommending spend reallocation and CTR improvements for campaign performance.  \n\nE Commerce | SQL | Github: https://github.com/Mohammedyahyahussain/E-Commerce-SQL | Aug 2025  \n- Analyzed 100K+ transactional records by designing complex SQL queries, revealing customer purchase trends.  \n- Performed RFM (Recency, Frequency, Monetary) analysis for segmentation, classifying customers and identifying churn risks to guide proactive interventions.  \n- Delivered actionable insights through SQL-driven retention strategies, boosting repeat purchases and enhancing engagement metrics.  \n\nCPI Inflation | Advanced Excel | Github: https://github.com/Mohammedyahyahussain/CPI_Inflation | July 2025  \n- Analyzed CPI drivers by grouping categories and applying statistical formulas, delivering accurate contribution insights.  \n- Developed automated Excel dashboards integrating SUMIFS, VLOOKUP, and pivot tables, enabling efficient data-driven comparisons.  \n- Identified dominant contributors and forecasted trends with models, supporting strategic planning and inventory adjustments.  \n\nEDUCATION  \nVisvesvaraya Technological University (VTU), Karnataka  \nBE in Computer Science | 2018 – 2023  \nCGPA: 7.47  \n\nCERTIFICATIONS  \nData Analytics – Coding Ninjas (https://drive.google.com/file/d/1N9IHjoRV54Ss5ugK0MZ4vAcjpritTq7i/view)",
+    "job_relevance_score": 88,
+    "ats_score": 92,
     "skills_added": [
-      "Power BI"
+      "Statistics"
     ],
-    "skills_enhanced": [
-      "SQL → Advanced SQL (CTEs, Window Functions, Stored Procedures)",
-      "Python → NumPy, Pandas, Matplotlib & Seaborn",
-      "Excel → Advanced Excel (Power Query, Data Transformation)"
-    ],
-    "projects_added": [
-      "E-com Orders",
-      "National Air Quality"
-    ],
-    "modification_summary": "Enhanced 3 skills, added 1 skill, incorporated 2 projects, improving overall DA job readiness by 100%."
+    "skills_enhanced": [],
+    "projects_added": [],
+    "modification_summary": "Enhanced 0 skills, added 1 skill, incorporated 0 projects, improving overall DA job readiness by 100%."
   },
   "skill_strategy": {
-    "skills_to_enhance": [
-      {
-        "base": "SQL",
-        "enhanced": "Advanced SQL (CTEs, Window Functions, Stored Procedures)",
-        "module": "Analytics with SQL"
-      },
-      {
-        "base": "Python",
-        "enhanced": "NumPy, Pandas, Matplotlib & Seaborn",
-        "module": "Python Programming"
-      },
-      {
-        "base": "Excel",
-        "enhanced": "Advanced Excel (Power Query, Data Transformation)",
-        "module": "Introduction to Data Analytics and Excel"
-      }
-    ],
+    "skills_to_enhance": [],
     "skills_to_add": [
       {
-        "skill": "Power BI",
-        "module": "Data Visualization with PowerBi"
+        "skill": "Statistics",
+        "module": "Statistics & EDA with Python"
       }
     ]
   },
@@ -142,20 +118,8 @@
       ],
       "modules_addressing_gaps": [
         {
-          "gap": "NumPy",
-          "module": "Python Programming",
-          "timeline": "Week 1-4",
-          "description": "Skill development"
-        },
-        {
-          "gap": "Pandas",
-          "module": "Python Programming",
-          "timeline": "Week 1-4",
-          "description": "Skill development"
-        },
-        {
-          "gap": "Matplotlib",
-          "module": "Python Programming",
+          "gap": "Statistics",
+          "module": "Statistics & EDA with Python",
           "timeline": "Week 1-4",
           "description": "Skill development"
         }
@@ -163,120 +127,56 @@
     }
   },
   "market_stats": {
-    "jobs_analyzed": 89,
+    "jobs_analyzed": 83,
     "top_skills": [
       {
-        "skill": "Excel",
-        "percentage": 91.01,
+        "skill": "SQL",
+        "percentage": 89.16,
         "demand": "Critical"
       },
       {
-        "skill": "SQL",
-        "percentage": 76.4,
+        "skill": "Excel",
+        "percentage": 69.88,
         "demand": "Critical"
       },
       {
         "skill": "Power BI",
-        "percentage": 32.58,
-        "demand": "Essential"
+        "percentage": 59.04,
+        "demand": "High"
       },
       {
         "skill": "Python",
-        "percentage": 29.21,
-        "demand": "Essential"
+        "percentage": 57.83,
+        "demand": "High"
       },
       {
-        "skill": "NumPy",
-        "percentage": 3.37,
+        "skill": "Data Visualization",
+        "percentage": 18.07,
         "demand": "Growing"
       }
     ],
-    "resume_has": 3,
+    "resume_has": 4,
     "curriculum_covers": 5
   },
   "curriculum_used": [
     {
-      "module": "Analytics with SQL",
+      "module": "Statistics & EDA with Python",
       "addresses_gaps": [
-        "Advanced SQL querying",
-        "CTEs",
-        "Window Functions",
-        "Stored Procedures"
+        "Statistics"
       ],
       "projects_included": [],
       "keywords_addressed": [
-        "Advanced SQL Querying",
-        "CTEs & Subqueries",
-        "Window Functions",
-        "Stored Procedures & Triggers"
-      ],
-      "skills_added_from_module": [],
-      "skills_enhanced_by_module": [
-        "SQL → Advanced SQL (CTEs, Window Functions, Stored Procedures)"
-      ]
-    },
-    {
-      "module": "Python Programming",
-      "addresses_gaps": [
-        "NumPy",
-        "Pandas",
-        "Matplotlib",
-        "Seaborn"
-      ],
-      "projects_included": [
-        "Covid-19",
-        "PhonePe Digital Payments"
-      ],
-      "keywords_addressed": [
-        "NumPy",
-        "Pandas Series",
-        "Pandas Data Manipulation",
-        "Matplotlib & Seaborn"
-      ],
-      "skills_added_from_module": [],
-      "skills_enhanced_by_module": [
-        "Python → NumPy, Pandas, Matplotlib & Seaborn"
-      ]
-    },
-    {
-      "module": "Introduction to Data Analytics and Excel",
-      "addresses_gaps": [
-        "Power Query",
-        "Data Transformation",
-        "Advanced Excel Operations"
-      ],
-      "projects_included": [
-        "National Air Quality",
-        "US Healthcare Dataset",
-        "India CPI Inflation"
-      ],
-      "keywords_addressed": [
-        "Power Query",
-        "Data Transformation",
-        "Excel Operations & Formatting"
-      ],
-      "skills_added_from_module": [],
-      "skills_enhanced_by_module": [
-        "Excel → Advanced Excel (Power Query, Data Transformation)"
-      ]
-    },
-    {
-      "module": "Data Visualization with PowerBi",
-      "addresses_gaps": [
-        "Power BI Fundamentals",
-        "DAX Functions",
-        "Report Creation"
-      ],
-      "projects_included": [
-        "E-com Orders"
-      ],
-      "keywords_addressed": [
-        "Power BI Fundamentals",
-        "DAX Functions",
-        "Report Creation"
+        "Statistical Fundamentals",
+        "Sampling & Measures of Central Tendency",
+        "Measures of Dispersion",
+        "Probability Distributions",
+        "Central Limit Theorem",
+        "Hypothesis Testing",
+        "Confidence Intervals",
+        "Statistical Tests"
       ],
       "skills_added_from_module": [
-        "Power BI"
+        "Statistics"
       ],
       "skills_enhanced_by_module": []
     }
