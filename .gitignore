@@ -40,6 +40,9 @@ Thumbs.db
 *.log
 logs/
 
+# test files
+testing/
+
 # Netlify
 .netlify/
 

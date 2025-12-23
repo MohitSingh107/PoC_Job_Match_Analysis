@@ -1,97 +1,77 @@
 {
   "full_analysis": {
-    "user_level": "Intermediate",
-    "experience_reasoning": "The candidate has explicitly stated 2+ years of experience as a Data Analyst, with the current role starting in August 2023 and a total experience of approximately 2 years mentioned in the profile summary. This places the candidate in the Intermediate level (1.00-3.00 years).",
+    "experience_level": "Intermediate",
+    "experience_considered": [
+      "Program Associate – Data Analytics at Coding Ninjas (Aug 2024 - Present)"
+    ],
+    "experience_reasoning": "Total: 16 months = 1.33 years. Program Associate – Data Analytics at Coding Ninjas (Aug 2024 - Present) = 16 months = 1.33 years",
     "skills_analysis": {
       "has_skills": [
-        "Python",
         "SQL",
-        "MySQL",
-        "Power BI",
-        "Excel",
-        "NumPy",
-        "Pandas",
-        "Matplotlib",
-        "Seaborn",
-        "EDA",
-        "DAX"
+        "Excel"
       ],
       "missing_skills": [
-        "Statistics"
+        "Power BI",
+        "Python",
+        "NumPy",
+        "Pandas"
       ]
     },
     "projects_analysis": {
-      "projects_to_keep": [
-        "PhonePe Digital Payments Dataset",
-        "Social Media Ad Campaign Performance",
-        "E Commerce",
-        "CPI Inflation"
-      ],
-      "projects_to_remove": []
+      "projects_to_keep": [],
+      "projects_to_remove": [
+        {
+          "title": "Review on Zomato IPO | Finance",
+          "duration": "Aug. 2021 – Dec. 2021",
+          "details": [
+            "Enhanced understanding of IPO procedures to contribute in gaining insights and understanding market sentiments",
+            "Conducted in-depth RHP analysis on financial statements, growth prospects, identifying key risks and opportunities",
+            "Presented thorough reports on company’s strengths, weaknesses and potential market performance post-IPO"
+          ]
+        }
+      ]
     },
     "keywords_analysis": {
       "present_keywords": [
-        "CTEs",
-        "Window Functions",
-        "Joins",
-        "Aggregations",
-        "Subqueries",
-        "Pandas",
-        "NumPy",
-        "Matplotlib",
-        "Seaborn",
-        "Power Query (not mentioned explicitly)",
-        "DAX",
-        "Pivot Tables",
-        "VLOOKUP",
-        "SUMIFS",
-        "RFM Analysis",
-        "SQL-style grouping",
-        "Statistical formulas",
-        "KPI Reporting",
-        "Reporting Automation",
-        "Exploratory Data Analysis (EDA)",
-        "Data Validation",
-        "Dashboard Automation",
-        "Data Storytelling",
-        "Data Preparation Automation",
-        "Data Visualization",
-        "Python scripting for automation",
-        "Excel formulas",
-        "Customer Segmentation",
-        "Retention Strategies",
-        "Churn Analysis",
-        "Data Consolidation",
-        "Dynamic Charting",
-        "Demographic Analysis"
+        "NPS data",
+        "retention curve analysis",
+        "learner insights",
+        "SQL",
+        "Excel",
+        "Metabase",
+        "funnel analysis",
+        "interactive visualizations",
+        "Excel database",
+        "WhatsApp Campaign",
+        "RHP analysis",
+        "financial statements analysis",
+        "interactive dashboards",
+        "data flow optimization",
+        "automated system for schedules and feedback"
       ],
       "missing_keywords": [
+        "Power BI",
+        "Python",
+        "Pandas",
+        "NumPy",
+        "Data Modeling",
         "Power Query",
+        "DAX",
         "ETL",
         "AWS",
-        "Data Modeling",
-        "Statistics",
         "R",
-        "Machine Learning",
-        "Big Data Tools (e.g., Hadoop, Spark)",
-        "Cloud Platforms (Azure, GCP)",
-        "Advanced Statistical Techniques",
-        "Data Warehousing",
-        "Automation with Airflow or similar",
-        "Version Control (Git explicitly)",
-        "Data Governance",
-        "SQL Window Functions (explicitly named as 'Window Functions' but no advanced usage details)",
-        "Advanced DAX (beyond measures)",
-        "Data Pipelines"
+        "Data Visualization (tools like Tableau, Power BI)",
+        "Window Functions",
+        "CTEs"
       ]
     },
     "ats_analysis": {
-      "reasoning": "The resume uses a simple single-column layout with standard fonts and clear section headers in reverse chronological order. Contact information is complete and placed at the top, and dates are consistently formatted, making it ATS-friendly."
+      "reasoning": "The resume uses a simple single-column format with clear section headers and consistent date formatting. Contact details are complete and placed at the top. However, some special characters and formatting issues (e.g., encoding artifacts) may slightly reduce ATS parsing accuracy."
     },
     "scores": {
-      "job_relevance_score": 85,
-      "ats_score": 90,
-      "score_reasoning": "Strong alignment with core intermediate data analytics skills and relevant projects with quantification supports a high job relevance score. The clean, well-structured format and keyword-rich content yield a high ATS score."
+      "job_relevance_score": 65,
+      "ats_score": 80,
+      "score_reasoning": "Good core skills in SQL and Excel with quantifiable achievements, but missing key market-demanded tools like Python and Power BI. ATS-friendly format with minor formatting issues."
     },
     "job_market_analysis": {
       "jobs_analyzed": 83,
@@ -108,6 +88,6 @@
         "R (appears in 8.43%) - Demand: Growing"
       ]
     },
-    "analysis_summary": "The resume effectively demonstrates intermediate-level data analytics skills with strong project experience and quantification, though it lacks some growing market skills like ETL, AWS, and advanced statistics. The format is ATS-optimized, supporting good keyword parsing and readability."
+    "analysis_summary": "Resume shows solid SQL and Excel skills with measurable impact but lacks Python, Power BI, and advanced analytics tools, limiting competitiveness. ATS format is good but minor encoding issues exist."
   }
 }

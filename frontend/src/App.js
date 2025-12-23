@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AlertCircle, Briefcase, ArrowLeft, CheckCircle, XCircle, UploadCloud, Lightbulb, Link as LinkIcon, Info, Clock, Lock, ChevronLeft, ChevronRight, GraduationCap } from 'lucide-react';
+import { AlertCircle, Briefcase, ArrowLeft, CheckCircle, XCircle, UploadCloud, Clock, Lock, ChevronLeft, ChevronRight, GraduationCap } from 'lucide-react';
 import { config } from './config';
 import './App.css';
 import jsPDF from 'jspdf';
@@ -92,6 +92,7 @@ const findProjectGitHubLink = (projectName, extractedLinks) => {
   return null;
 };
 
+
 const findUrlFromExtractedLinks = (lineText, extractedLinks, linkType) => {
   if (!extractedLinks || extractedLinks.length === 0) return null;
   
@@ -150,6 +151,14 @@ const findUrlFromExtractedLinks = (lineText, extractedLinks, linkType) => {
           } else if (linkType === 'kaggle' && url.includes('kaggle.com')) {
             return link.url;
           } else if (linkType === 'email' && (url.startsWith('mailto:') || url.includes('@'))) {
+            // For email, prioritize extracting from link.text if it contains a valid email
+            // since link.url might have placeholder values like "x@gmail.com"
+            // The text field is more reliable as it comes directly from PDF extraction
+            const emailInText = link.text.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/i);
+            if (emailInText) {
+              return emailInText[1].toLowerCase();
+            }
+            // Fallback to url if text doesn't have a valid email
             return url.startsWith('mailto:') ? url.replace('mailto:', '') : url;
           }
         }
@@ -179,6 +188,14 @@ const findUrlFromExtractedLinks = (lineText, extractedLinks, linkType) => {
       } else if (linkType === 'kaggle' && url.includes('kaggle.com')) {
         return link.url;
       } else if (linkType === 'email' && (url.startsWith('mailto:') || url.includes('@'))) {
+        // For email, prioritize extracting from link.text if it contains a valid email
+        // since link.url might have placeholder values like "x@gmail.com"
+        // The text field is more reliable as it comes directly from PDF extraction
+        const emailInText = link.text.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/i);
+        if (emailInText) {
+          return emailInText[1].toLowerCase();
+        }
+        // Fallback to url if text doesn't have a valid email
         return url.startsWith('mailto:') ? url.replace('mailto:', '') : url;
       } else if (linkType === 'portfolio' && (url.startsWith('http://') || url.startsWith('https://'))) {
         // Only return if it's not a known social platform
@@ -255,8 +272,15 @@ const parseHeaderContent = (content, extractedLinks = []) => {
           return;
         }
         
-        // LinkedIn detection
+        // LinkedIn detection - check for direct URL first (LLM now includes URLs directly)
         if (!headerData.linkedin) {
+          // First, check for direct URL in the part
+          const linkedinUrlMatch = part.match(/(https?:\/\/[^\s|]+linkedin\.com[^\s|]*)/i);
+          if (linkedinUrlMatch) {
+            headerData.linkedin = linkedinUrlMatch[1];
+            return;
+          }
+          
           if (part.toLowerCase().includes('linkedin') || part.match(/linkedin\.com/i)) {
             const extractedLinkedIn = findUrlFromExtractedLinks(part, extractedLinks, 'linkedin');
             if (extractedLinkedIn) {
@@ -277,21 +301,30 @@ const parseHeaderContent = (content, extractedLinks = []) => {
           }
         }
         
-        // GitHub detection
-        if (!headerData.github && (part.toLowerCase().includes('github') || part.match(/github\.com/i))) {
-          const extractedGitHub = findUrlFromExtractedLinks(part, extractedLinks, 'github');
-          if (extractedGitHub) {
-            headerData.github = extractedGitHub;
+        // GitHub detection - check for direct URL first (LLM now includes URLs directly)
+        if (!headerData.github) {
+          // First, check for direct URL in the part
+          const githubUrlMatch = part.match(/(https?:\/\/[^\s|]+github\.com[^\s|]*)/i);
+          if (githubUrlMatch) {
+            headerData.github = githubUrlMatch[1];
             return;
           }
           
-          if (part.match(/github\.com/i)) {
-            const githubMatch = part.match(/(https?:\/\/)?(www\.)?github\.com\/([a-zA-Z0-9_-]+)/i);
-            if (githubMatch) {
-              headerData.github = githubMatch[0].startsWith('http')
-                ? githubMatch[0]
-                : 'https://' + githubMatch[0];
+          if (part.toLowerCase().includes('github') || part.match(/github\.com/i)) {
+            const extractedGitHub = findUrlFromExtractedLinks(part, extractedLinks, 'github');
+            if (extractedGitHub) {
+              headerData.github = extractedGitHub;
               return;
+            }
+            
+            if (part.match(/github\.com/i)) {
+              const githubMatch = part.match(/(https?:\/\/)?(www\.)?github\.com\/([a-zA-Z0-9_-]+)/i);
+              if (githubMatch) {
+                headerData.github = githubMatch[0].startsWith('http')
+                  ? githubMatch[0]
+                  : 'https://' + githubMatch[0];
+                return;
+              }
             }
           }
         }
@@ -322,43 +355,61 @@ const parseHeaderContent = (content, extractedLinks = []) => {
       return;
     }
 
-    // ✅ LinkedIn detection (extracted links first)
-    if (line.toLowerCase().includes('linkedin')) {
-      const extractedLinkedIn = findUrlFromExtractedLinks(line, extractedLinks, 'linkedin');
-      if (extractedLinkedIn) {
-        headerData.linkedin = extractedLinkedIn;
+    // ✅ LinkedIn detection - check for direct URL first (LLM now includes URLs directly)
+    if (!headerData.linkedin) {
+      // First, check for direct URL in the line
+      const linkedinUrlMatch = line.match(/(https?:\/\/[^\s]+linkedin\.com[^\s]*)/i);
+      if (linkedinUrlMatch) {
+        headerData.linkedin = linkedinUrlMatch[1];
+        return;
+      }
+      
+      if (line.toLowerCase().includes('linkedin')) {
+        const extractedLinkedIn = findUrlFromExtractedLinks(line, extractedLinks, 'linkedin');
+        if (extractedLinkedIn) {
+          headerData.linkedin = extractedLinkedIn;
+          return;
+        }
+      }
+
+      // Fallback: pattern matching if linkedin.com is in the text
+      if (line.match(/linkedin\.com/i)) {
+        const linkedinMatch = line.match(/(https?:\/\/)?(www\.)?linkedin\.com\/in\/([a-zA-Z0-9_-]+)/i);
+        if (linkedinMatch) {
+          headerData.linkedin = linkedinMatch[0].startsWith('http')
+            ? linkedinMatch[0]
+            : 'https://' + linkedinMatch[0];
+        } else {
+          headerData.linkedin = line.includes('http') ? line : 'https://' + line;
+        }
         return;
       }
     }
 
-    // Fallback: pattern matching if linkedin.com is in the text
-    if (line.match(/linkedin\.com/i)) {
-      const linkedinMatch = line.match(/(https?:\/\/)?(www\.)?linkedin\.com\/in\/([a-zA-Z0-9_-]+)/i);
-      if (linkedinMatch) {
-        headerData.linkedin = linkedinMatch[0].startsWith('http')
-          ? linkedinMatch[0]
-          : 'https://' + linkedinMatch[0];
-      } else {
-        headerData.linkedin = line.includes('http') ? line : 'https://' + line;
+    // GitHub detection - check for direct URL first (LLM now includes URLs directly)
+    if (!headerData.github) {
+      // First, check for direct URL in the line
+      const githubUrlMatch = line.match(/(https?:\/\/[^\s]+github\.com[^\s]*)/i);
+      if (githubUrlMatch) {
+        headerData.github = githubUrlMatch[1];
+        return;
       }
-      return;
-    }
-
-    // GitHub detection
-    const extractedGitHub = findUrlFromExtractedLinks(line, extractedLinks, 'github');
-    if (extractedGitHub) {
-      headerData.github = extractedGitHub;
-      return;
-    }
-
-    if (line.match(/github\.com/i)) {
-      const githubMatch = line.match(/(https?:\/\/)?(www\.)?github\.com\/([a-zA-Z0-9_-]+)/i);
-      if (githubMatch) {
-        headerData.github = githubMatch[0].startsWith('http')
-          ? githubMatch[0]
-          : 'https://' + githubMatch[0];
+      
+      const extractedGitHub = findUrlFromExtractedLinks(line, extractedLinks, 'github');
+      if (extractedGitHub) {
+        headerData.github = extractedGitHub;
+        return;
       }
-      return;
+
+      if (line.match(/github\.com/i)) {
+        const githubMatch = line.match(/(https?:\/\/)?(www\.)?github\.com\/([a-zA-Z0-9_-]+)/i);
+        if (githubMatch) {
+          headerData.github = githubMatch[0].startsWith('http')
+            ? githubMatch[0]
+            : 'https://' + githubMatch[0];
+        }
+        return;
+      }
     }
 
     // Kaggle detection
@@ -1180,8 +1231,14 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
     }
     
     const formattedLines = [];
+    const skipIndices = new Set(); // Track lines to skip (standalone URLs that were processed with certification entries)
     
     lines.forEach((line, idx) => {
+      // Skip lines that were already processed as part of a certification entry
+      if (skipIndices.has(idx)) {
+        return;
+      }
+      
       const trimmed = line.trim();
       if (!trimmed) {
         if (idx > 0 && idx < lines.length - 1 && lines[idx - 1].trim() && lines[idx + 1].trim()) {
@@ -1320,7 +1377,45 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
         const linkContent = trimmed.replace(/^Certificate Link:?\s*/i, '').trim();
         formattedLines.push({ type: 'certificate-link', content: linkContent, key: `cert-link-${idx}`, diffType });
       } else if (isCertificationEntry) {
-        formattedLines.push({ type: 'certification-entry', content: trimmed, key: `cert-${idx}`, diffType });
+        // Check for URL in current line first
+        let certUrl = null;
+        let certContent = trimmed;
+        let urlFoundOnCurrentLine = false;
+        
+        // Check for URL in parentheses or directly in the current line
+        const urlInParensMatch = certContent.match(/\(([^)]*https?:\/\/[^)]+)\)/i);
+        if (urlInParensMatch) {
+          certUrl = urlInParensMatch[1];
+          certContent = certContent.replace(/\([^)]*https?:\/\/[^)]+\)/gi, '').trim();
+          urlFoundOnCurrentLine = true;
+        } else {
+          // Check for direct URL in current line
+          const directUrlMatch = certContent.match(/(https?:\/\/[^\s)]+)/i);
+          if (directUrlMatch) {
+            certUrl = directUrlMatch[1];
+            certContent = certContent.replace(directUrlMatch[0], '').trim();
+            urlFoundOnCurrentLine = true;
+          }
+        }
+        
+        // If no URL found in current line, check next line for standalone URL
+        if (!certUrl && idx + 1 < lines.length) {
+          const nextLine = lines[idx + 1].trim();
+          if (nextLine && /^https?:\/\/[^\s]+$/i.test(nextLine) && nextLine.length < 300) {
+            certUrl = nextLine;
+            skipIndices.add(idx + 1); // Mark next line to be skipped
+            urlFoundOnCurrentLine = false; // URL found on next line
+          }
+        }
+        
+        formattedLines.push({ 
+          type: 'certification-entry', 
+          content: certContent, 
+          url: certUrl,
+          urlOnCurrentLine: urlFoundOnCurrentLine,
+          key: `cert-${idx}`, 
+          diffType 
+        });
       } else if (isBullet) {
         const bulletText = trimmed.replace(/^[•·\-*\d+.]\s*/, '');
         formattedLines.push({ type: 'bullet', content: bulletText, key: `bullet-${idx}`, diffType });
@@ -1377,26 +1472,41 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
           );
         
         case 'project-title':
-          // Parse project title format: "Project Name | Technology | GitHub" or "Project Name | Technology"
+          // Parse project title format: 
+          // Type 1: "Project Name | Technology | https://github.com/..." - use "Link" as placeholder
+          // Type 2: "Project Name | Technology | GitHub: https://github.com/..." - use "GitHub" (text before colon) as placeholder
           const projectParts = item.content.split('|').map(p => p.trim());
           let projectName = '';
           let projectTech = '';
           let projectUrl = '';
-          let hasGitHubText = false;
+          let linkPlaceholder = 'Link'; // Default placeholder
           
-          // Check if any part contains "GitHub" or "Github" text
-          const githubTextIndex = projectParts.findIndex(part => /github/i.test(part));
-          if (githubTextIndex !== -1) {
-            hasGitHubText = true;
-            // Remove GitHub text from parts
-            projectParts.splice(githubTextIndex, 1);
+          // Find the part containing URL (could be direct URL or "Label: URL" format)
+          let urlPartIndex = -1;
+          for (let i = 0; i < projectParts.length; i++) {
+            const part = projectParts[i];
+            
+            // Check for Type 2: "Label: https://..."
+            const labelUrlMatch = part.match(/^([^:]+):\s*(https?:\/\/[^\s]+)/i);
+            if (labelUrlMatch) {
+              projectUrl = labelUrlMatch[2];
+              linkPlaceholder = labelUrlMatch[1].trim(); // Use the label as placeholder
+              urlPartIndex = i;
+              break;
+            }
+            
+            // Check for Type 1: direct URL
+            if (/^https?:\/\//i.test(part)) {
+              projectUrl = part;
+              linkPlaceholder = 'Link'; // Default for direct URL
+              urlPartIndex = i;
+              break;
+            }
           }
           
-          // Extract URL (usually the last part that starts with http)
-          const urlIndex = projectParts.findIndex(part => /^https?:\/\//i.test(part));
-          if (urlIndex !== -1) {
-            projectUrl = projectParts[urlIndex];
-            projectParts.splice(urlIndex, 1);
+          // Remove the URL part from projectParts
+          if (urlPartIndex !== -1) {
+            projectParts.splice(urlPartIndex, 1);
           }
           
           // Remaining parts: first is name, second (if exists) is technology
@@ -1418,12 +1528,12 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
             return normalizedTitle === normalizedAdded; // Exact match only
           });
           
-          // Find project-specific GitHub link based on project name (only if NOT a Coding Ninjas project)
-          if (!isAddedProject && (hasGitHubText || !projectUrl) && projectName && extractedLinks) {
+          // Find project-specific GitHub link based on project name (only if NOT a Coding Ninjas project and no URL found)
+          if (!isAddedProject && !projectUrl && projectName && extractedLinks) {
             const projectSpecificUrl = findProjectGitHubLink(projectName, extractedLinks);
             if (projectSpecificUrl) {
               projectUrl = projectSpecificUrl;
-              hasGitHubText = true; // Ensure we show the link
+              linkPlaceholder = 'Link'; // Default when found from extractedLinks
             }
           }
           
@@ -1432,22 +1542,18 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
               <span>
                 {projectName}
                 {projectTech && <span style={{ fontWeight: 400, color: '#4b5563' }}> | {projectTech}</span>}
-                {/* Only show GitHub link if NOT a Coding Ninjas project */}
-                {!isAddedProject && (projectUrl || hasGitHubText) && (
+                {/* Only show link if NOT a Coding Ninjas project and URL exists */}
+                {!isAddedProject && projectUrl && (
                   <>
                     {(projectName || projectTech) && <span style={{ fontWeight: 400, color: '#4b5563' }}> | </span>}
-                    {projectUrl ? (
                     <a 
                       href={projectUrl} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       style={{ color: '#2563eb', textDecoration: 'none', fontSize: '10pt', fontWeight: 400 }}
                     >
-                      GitHub
+                      {linkPlaceholder}
                     </a>
-                    ) : (
-                      <span style={{ fontWeight: 400, color: '#4b5563' }}>GitHub</span>
-                    )}
                   </>
                 )}
               </span>
@@ -1483,7 +1589,7 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
             </div>
           );
         
-        case 'certificate-link':
+        case 'certificate-link': {
           // Extract URL from the link content or try to find from extractedLinks
           let certUrl = null;
           const certUrlMatch = item.content.match(/https?:\/\/[^\s]+/i);
@@ -1604,10 +1710,28 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
               )}
             </div>
           );
+        }
         
-        case 'certification-entry':
-          // Parse certification format: "Title | Organization | Year" or "Organization" or "Organization\nTitle | Year"
-          const certParts = item.content.split('|').map(p => p.trim());
+        case 'certification-entry': {
+          // Parse certification format: 
+          // "Title – Organization (https://...)" or "Title | Organization | Year" or "Organization"
+          // URL may be in the current line or on the next line
+          let certText = item.content;
+          let certUrl = item.url || null; // Use URL from processing (already extracted)
+          const urlOnCurrentLine = item.urlOnCurrentLine !== false; // Default to true if not specified
+          
+          // Parse the remaining text (format: "Title | Organization | Year" or "Title – Organization")
+          // Handle both pipe and dash separators
+          let certParts = [];
+          if (certText.includes('|')) {
+            certParts = certText.split('|').map(p => p.trim()).filter(Boolean);
+          } else if (certText.includes('–') || certText.includes('-')) {
+            // Handle dash separator (en dash or hyphen)
+            certParts = certText.split(/[–-]/).map(p => p.trim()).filter(Boolean);
+          } else {
+            certParts = [certText];
+          }
+          
           let certTitle = '';
           let certOrg = '';
           let certYear = '';
@@ -1618,32 +1742,63 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
             certOrg = certParts[1];
             certYear = certParts[2];
           } else if (certParts.length === 2) {
-            // Format: "Title | Year" or "Organization | Year"
+            // Format: "Title | Year" or "Organization | Year" or "Title – Organization"
             // Check if second part is a year
             if (/^\d{4}/.test(certParts[1])) {
               certTitle = certParts[0];
               certYear = certParts[1];
             } else {
-              certOrg = certParts[0];
-              certTitle = certParts[1];
+              // Likely "Title – Organization" format
+              certTitle = certParts[0];
+              certOrg = certParts[1];
             }
           } else {
-            // Single part - likely organization name
-            certOrg = certParts[0];
+            // Single part - could be title or organization
+            certTitle = certParts[0];
           }
           
           return (
             <div key={item.key} style={{ fontSize: '10pt', fontWeight: 700, color: '#000000', marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
-              {certTitle && <span>{certTitle}</span>}
-              {certOrg && (
-                <span>
-                  {certTitle ? ' | ' : ''}
-                  {certOrg}
-                </span>
+              <div>
+                {certTitle && <span>{certTitle}</span>}
+                {certOrg && (
+                  <span>
+                    {certTitle ? ' | ' : ''}
+                    {certOrg}
+                  </span>
+                )}
+                {certYear && <span> | {certYear}</span>}
+                {/* If URL was found on current line, embed it inline */}
+                {certUrl && urlOnCurrentLine && (
+                  <span>
+                    {' '}
+                    <a 
+                      href={certUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 400 }}
+                    >
+                      View Certificate
+                    </a>
+                  </span>
+                )}
+              </div>
+              {/* If URL was found on next line, show it on a separate line */}
+              {certUrl && !urlOnCurrentLine && (
+                <div style={{ marginTop: '0.1rem', fontWeight: 400 }}>
+                  <a 
+                    href={certUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 400 }}
+                  >
+                    View Certificate
+                  </a>
+                </div>
               )}
-              {certYear && <span> | {certYear}</span>}
             </div>
           );
+        }
         
         case 'bullet':
           // Parse markdown bold (**text**) for skills and other sections
@@ -2047,7 +2202,7 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
                 cursor: 'pointer',
                 transition: 'all 0.2s',
                 background: currentView === 'original' ? 'white' : 'transparent',
-                color: currentView === 'original' ? '#6366F1' : '#64748b',
+                color: currentView === 'original' ? '#F59E0B' : '#64748b',
                 boxShadow: currentView === 'original' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
               }}
             >
@@ -2064,7 +2219,7 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
                 cursor: 'pointer',
                 transition: 'all 0.2s',
                 background: currentView === 'side-by-side' ? 'white' : 'transparent',
-                color: currentView === 'side-by-side' ? '#6366F1' : '#64748b',
+                color: currentView === 'side-by-side' ? '#F59E0B' : '#64748b',
                 boxShadow: currentView === 'side-by-side' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
               }}
             >
@@ -2081,7 +2236,7 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
                 cursor: 'pointer',
                 transition: 'all 0.2s',
                 background: currentView === 'improved' ? 'white' : 'transparent',
-                color: currentView === 'improved' ? '#6366F1' : '#64748b',
+                color: currentView === 'improved' ? '#F59E0B' : '#64748b',
                 boxShadow: currentView === 'improved' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
               }}
             >
@@ -2226,6 +2381,7 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
 // Testimonials Carousel Component
 const TestimonialsCarousel = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const containerRef = useRef(null);
 
   const testimonials = [
     {
@@ -2258,18 +2414,33 @@ const TestimonialsCarousel = () => {
     }
   ];
 
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % testimonials.length);
+  const nextSlide = (e) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    setCurrentSlide((prev) => {
+      // Viewport shows ~3.5 cards (3 full + 1 partial)
+      // When clicking right, we want to show the next card fully with one more at the end
+      // With 4 cards total: max slide is 1 (to show cards 1, 2, 3 fully)
+      const maxSlide = Math.max(0, testimonials.length - 3); // 4 - 3 = 1
+      const next = prev < maxSlide ? prev + 1 : prev;
+      return next;
+    });
   };
 
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+  const prevSlide = (e) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    setCurrentSlide((prev) => {
+      // Don't scroll before the first card
+      return prev > 0 ? prev - 1 : 0;
+    });
   };
 
   return (
-    <div style={{ position: 'relative', width: '100%', maxWidth: '100%', margin: '0 auto', overflow: 'hidden' }}>
+    <div ref={containerRef} style={{ position: 'relative', width: '100%', maxWidth: '100%', margin: '0 auto', overflow: 'hidden' }}>
       <button
         onClick={prevSlide}
+        type="button"
         style={{
           position: 'absolute',
           left: '-16px',
@@ -2287,7 +2458,8 @@ const TestimonialsCarousel = () => {
           justifyContent: 'center',
           transition: 'all 0.2s',
           width: '40px',
-          height: '40px'
+          height: '40px',
+          pointerEvents: 'auto'
         }}
         onMouseEnter={(e) => {
           e.target.style.background = '#f9fafb';
@@ -2307,7 +2479,9 @@ const TestimonialsCarousel = () => {
         padding: '0 3rem',
         maxWidth: '1400px',
         margin: '0 auto',
-        overflow: 'visible'
+        overflow: 'hidden',
+        transform: `translateX(-${currentSlide * 364}px)`,
+        transition: 'transform 0.5s ease-in-out'
       }}>
         {testimonials.map((testimonial, idx) => {
           const isLastCard = idx === testimonials.length - 1;
@@ -2330,7 +2504,7 @@ const TestimonialsCarousel = () => {
           
           return (
           <div 
-            key={`${currentSlide}-${idx}`}
+            key={idx}
             style={cardStyle}
           >
             {/* Header: Profile image and name/title side by side */}
@@ -2413,6 +2587,7 @@ const TestimonialsCarousel = () => {
 
       <button
         onClick={nextSlide}
+        type="button"
         style={{
           position: 'absolute',
           right: '-16px',
@@ -2430,7 +2605,8 @@ const TestimonialsCarousel = () => {
           justifyContent: 'center',
           transition: 'all 0.2s',
           width: '40px',
-          height: '40px'
+          height: '40px',
+          pointerEvents: 'auto'
         }}
         onMouseEnter={(e) => {
           e.target.style.background = '#f9fafb';
@@ -2463,7 +2639,7 @@ const ResumeAnalyzer = () => {
   // LinkedIn URL state
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [linkedinUploading, setLinkedinUploading] = useState(false);
-  const [linkedinUploadProgress, setLinkedinUploadProgress] = useState(0);
+  const [, setLinkedinUploadProgress] = useState(0);
   const [linkedinUploadSuccess, setLinkedinUploadSuccess] = useState(false);
 
   // Array of "Did you know?" facts for stages 2 and 3
@@ -3517,176 +3693,6 @@ if (step === 'upload') {
             )}
           </div>
 
-        {/* LinkedIn Profile Input (Optional) */}
-        <div style={{ marginBottom: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '0.5rem', 
-            marginBottom: '0.75rem',
-            maxWidth: '525px',
-            width: '100%',
-            justifyContent: 'center'
-          }}>
-            <Lightbulb size={18} style={{ color: '#6B7280' }} />
-            <p style={{ 
-              fontSize: '0.875rem', 
-              color: '#111827', 
-              margin: 0,
-              fontWeight: 500,
-              fontFamily: "Inter"
-            }}>
-              Don't have your resume handy? Paste your LinkedIn profile URL instead.
-            </p>
-                </div>
-
-          <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center' }}>
-              <div style={{ 
-                display: 'flex',
-                alignItems: 'center',
-                border: '1px solid #E5E7EB',
-                borderRadius: '0.5rem',
-                padding: '0.75rem 1rem',
-                backgroundColor: '#FFFFFF',
-                gap: '0.75rem',
-                maxWidth: '525px',
-              width: '100%'
-              }}>
-                <LinkIcon size={20} style={{ color: '#6B7280', flexShrink: 0 }} />
-                <input
-                  type="text"
-                  value={linkedinUrl}
-                  onChange={(e) => {
-                    setLinkedinUrl(e.target.value);
-                    setLinkedinUploadSuccess(false);
-                  }}
-                  placeholder="e.g., https://linkedin.com/in/john-doe"
-                  style={{
-                    flex: 1,
-                    border: 'none',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    color: '#111827',
-                    backgroundColor: 'transparent',
-                    fontFamily: "'Space Grotesk', sans-serif"
-                  }}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !linkedinUploading) {
-                      handleLinkedInSubmit();
-                    }
-                  }}
-                />
-                <Info size={18} style={{ color: '#6B7280', flexShrink: 0, cursor: 'help' }} />
-            </div>
-
-            {/* Upload Progress Bar */}
-            {linkedinUploading && (
-              <div style={{ marginTop: '0.75rem', width: '100%', maxWidth: '525px' }}>
-                  <div style={{ 
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '0.25rem'
-                  }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#FF6B35', fontFamily: "'Space Grotesk', sans-serif" }}>
-                      {linkedinUploadProgress}%
-                    </span>
-                  </div>
-            <div style={{ 
-                    width: '100%',
-                    height: '6px',
-                    backgroundColor: '#E5E7EB',
-                    borderRadius: '3px',
-                    overflow: 'hidden'
-            }}>
-                <div style={{ 
-                      width: `${linkedinUploadProgress}%`,
-                      height: '100%',
-                      backgroundColor: '#FF6B35',
-                      borderRadius: '3px',
-                      transition: 'width 0.2s ease'
-                    }} />
-                  </div>
-                  <p style={{ 
-                    fontSize: '0.75rem', 
-                    color: '#6B7280', 
-                    margin: '0.25rem 0 0',
-                    textAlign: 'center',
-                    fontFamily: "'Space Grotesk', sans-serif"
-                  }}>
-                    uploading....
-                  </p>
-                </div>
-            )}
-
-            {/* Upload Success Notification */}
-            {linkedinUploadSuccess && (
-                    <div style={{ 
-                marginTop: '0.75rem',
-                padding: '0.75rem 1rem',
-                backgroundColor: '#F0FDF4',
-                border: '1px solid #10B981',
-                borderRadius: '0.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '1rem',
-                animation: 'fadeIn 0.3s ease',
-                width: '100%',
-                maxWidth: '525px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    backgroundColor: '#10B981',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                    }}>
-                    <CheckCircle size={18} style={{ color: '#FFFFFF' }} />
-                    </div>
-                    <div>
-                    <p style={{ 
-                      fontSize: '0.875rem', 
-                      fontWeight: 600, 
-                      color: '#111827', 
-                      margin: 0,
-                      fontFamily: "'Space Grotesk', sans-serif"
-                    }}>
-                      Upload Success
-                    </p>
-                    <p style={{ 
-                      fontSize: '0.75rem', 
-                      color: '#6B7280', 
-                      margin: '0.25rem 0 0',
-                      fontFamily: "'Space Grotesk', sans-serif"
-                    }}>
-                      Your resume is uploaded
-                    </p>
-                    </div>
-                  </div>
-                <button
-                  onClick={() => setLinkedinUploadSuccess(false)}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#6B7280',
-                    cursor: 'pointer',
-                    padding: '0.25rem',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}
-                >
-                  <XCircle size={18} />
-                </button>
-              </div>
-            )}
-            </div>
-          </div>
-
         {/* Error Message */}
         {error && (
             <div style={{ 
@@ -3768,7 +3774,6 @@ if (step === 'upload') {
           alignItems: 'center', 
           gap: '0.5rem',
           marginBottom: '2rem',
-          marginRight: '60px'
         }}>
           <div style={{ 
             display: 'flex', 
@@ -3802,7 +3807,6 @@ if (step === 'upload') {
           textAlign: 'center',
           lineHeight: 1.5,
           fontFamily: "Inter",
-          marginRight: '60px'
         }}>
           Next: See your personalized Job Match Report with skill gaps, readiness score, and learning roadmap.
         </p>
@@ -4018,7 +4022,7 @@ if (step === 'analyzing') {
           top: 50%;
           left: 100%;
           height: 1px;
-          background: linear-gradient(to right, #6366F1, transparent);
+          background: linear-gradient(to right, #F59E0B, transparent);
           transform-origin: left;
           animation: progress-line-anim 2s infinite alternate;
           opacity: 0.6;
@@ -4056,7 +4060,7 @@ if (step === 'analyzing') {
                 width: '100%',
                 height: '100%',
                 borderRadius: '50%',
-                background: 'rgba(99, 102, 241, 0.5)',
+                background: 'rgba(245, 158, 11, 0.5)',
                 animation: 'ripple 2s ease-out infinite',
                 animationDelay: '0s'
               }}></div>
@@ -4065,7 +4069,7 @@ if (step === 'analyzing') {
                 width: '100%',
                 height: '100%',
                 borderRadius: '50%',
-                background: 'rgba(99, 102, 241, 0.5)',
+                background: 'rgba(245, 158, 11, 0.5)',
                 animation: 'ripple 2s ease-out infinite',
                 animationDelay: '1s'
               }}></div>
@@ -4073,10 +4077,10 @@ if (step === 'analyzing') {
                 position: 'relative',
                 width: '112px',
                 height: '112px',
-                background: 'linear-gradient(to bottom right, #6366F1, #9333EA)',
+                background: 'linear-gradient(to bottom right, #F59E0B, #EA580C)',
                 borderRadius: '50%',
                 animation: 'softGlow 3s ease-in-out infinite',
-                boxShadow: '0 25px 50px rgba(99, 102, 241, 0.5)',
+                boxShadow: '0 25px 50px rgba(245, 158, 11, 0.5)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -4116,12 +4120,12 @@ if (step === 'analyzing') {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'rgba(99, 102, 241, 0.1)',
+                    background: 'rgba(245, 158, 11, 0.1)',
                     borderRadius: '50%',
-                    border: '1px solid #6366F1',
+                    border: '1px solid #F59E0B',
                     animation: 'pulse 2s ease-in-out infinite'
                   }}>
-                    <span className="material-symbols-outlined" style={{ color: '#6366F1', fontSize: '16px' }}>search</span>
+                    <span className="material-symbols-outlined" style={{ color: '#F59E0B', fontSize: '16px' }}>search</span>
                   </div>
                   <div>
                     <h3 style={{ fontWeight: 600, color: '#111827', fontFamily: "Archivo" }}>Scanning Keywords...</h3>
@@ -4133,14 +4137,14 @@ if (step === 'analyzing') {
                     position: 'absolute',
                     width: '75%',
                     height: '1px',
-                    background: 'linear-gradient(to right, transparent, #818CF8, transparent)'
+                    background: 'linear-gradient(to right, transparent, #FB923C, transparent)'
                   }}></div>
                   <div style={{ position: 'absolute', left: '25%' }}>
                     <span style={{
                       padding: '0.25rem 0.5rem',
                       fontSize: '0.875rem',
-                      color: '#6366F1',
-                      background: 'rgba(99, 102, 241, 0.1)',
+                      color: '#F59E0B',
+                      background: 'rgba(245, 158, 11, 0.1)',
                       borderRadius: '0.375rem',
                       animation: 'keywordAppear 5s ease-in-out infinite 0s'
                     }}>Leadership</span>
@@ -4149,8 +4153,8 @@ if (step === 'analyzing') {
                     <span style={{
                       padding: '0.25rem 0.5rem',
                       fontSize: '0.875rem',
-                      color: '#6366F1',
-                      background: 'rgba(99, 102, 241, 0.1)',
+                      color: '#F59E0B',
+                      background: 'rgba(245, 158, 11, 0.1)',
                       borderRadius: '0.375rem',
                       animation: 'keywordAppear 5s ease-in-out infinite 1s'
                     }}>React</span>
@@ -4159,8 +4163,8 @@ if (step === 'analyzing') {
                     <span style={{
                       padding: '0.25rem 0.5rem',
                       fontSize: '0.875rem',
-                      color: '#6366F1',
-                      background: 'rgba(99, 102, 241, 0.1)',
+                      color: '#F59E0B',
+                      background: 'rgba(245, 158, 11, 0.1)',
                       borderRadius: '0.375rem',
                       animation: 'keywordAppear 5s ease-in-out infinite 2s'
                     }}>Agile</span>
@@ -4169,8 +4173,8 @@ if (step === 'analyzing') {
                     <span style={{
                       padding: '0.25rem 0.5rem',
                       fontSize: '0.875rem',
-                      color: '#6366F1',
-                      background: 'rgba(99, 102, 241, 0.1)',
+                      color: '#F59E0B',
+                      background: 'rgba(245, 158, 11, 0.1)',
                       borderRadius: '0.375rem',
                       animation: 'keywordAppear 5s ease-in-out infinite 3s'
                     }}>Project Management</span>
@@ -4198,7 +4202,7 @@ if (step === 'analyzing') {
                 width: '256px',
                 height: '256px',
                 borderRadius: '50%',
-                border: '2px solid rgba(99, 102, 241, 0.3)',
+                border: '2px solid rgba(245, 158, 11, 0.3)',
                 animation: 'swirl 8s ease-in-out infinite'
               }}></div>
               <div style={{
@@ -4206,17 +4210,17 @@ if (step === 'analyzing') {
                 width: '192px',
                 height: '192px',
                 borderRadius: '50%',
-                border: '1px solid rgba(147, 51, 234, 0.4)',
+                border: '1px solid rgba(234, 88, 12, 0.4)',
                 animation: 'swirlReverse 12s ease-in-out infinite'
               }}></div>
               <div style={{
                 position: 'absolute',
                 width: '128px',
                 height: '128px',
-                background: 'linear-gradient(to bottom right, #6366F1, #9333EA)',
+                background: 'linear-gradient(to bottom right, #F59E0B, #EA580C)',
                 borderRadius: '50%',
                 animation: 'pulseCore 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                boxShadow: '0 25px 50px rgba(99, 102, 241, 0.5)'
+                boxShadow: '0 25px 50px rgba(245, 158, 11, 0.5)'
               }}></div>
               <span className="material-symbols-outlined" style={{ color: 'white', fontSize: '48px', zIndex: 10, opacity: 0.9 }}>query_stats</span>
             </div>
@@ -4272,19 +4276,19 @@ if (step === 'analyzing') {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'rgba(99, 102, 241, 0.1)',
+                    background: 'rgba(245, 158, 11, 0.1)',
                     borderRadius: '50%',
-                    border: '2px solid #6366F1',
+                    border: '2px solid #F59E0B',
                     marginBottom: '0.25rem'
                   }}>
                     <div style={{ display: 'flex', gap: '0.25rem' }}>
-                      <div style={{ width: '6px', height: '6px', background: '#6366F1', borderRadius: '50%', animation: 'dotPulse 1.4s infinite ease-in-out both' }}></div>
-                      <div style={{ width: '6px', height: '6px', background: '#6366F1', borderRadius: '50%', animation: 'dotPulse 1.4s 0.2s infinite ease-in-out both' }}></div>
-                      <div style={{ width: '6px', height: '6px', background: '#6366F1', borderRadius: '50%', animation: 'dotPulse 1.4s 0.4s infinite ease-in-out both' }}></div>
+                      <div style={{ width: '6px', height: '6px', background: '#F59E0B', borderRadius: '50%', animation: 'dotPulse 1.4s infinite ease-in-out both' }}></div>
+                      <div style={{ width: '6px', height: '6px', background: '#F59E0B', borderRadius: '50%', animation: 'dotPulse 1.4s 0.2s infinite ease-in-out both' }}></div>
+                      <div style={{ width: '6px', height: '6px', background: '#F59E0B', borderRadius: '50%', animation: 'dotPulse 1.4s 0.4s infinite ease-in-out both' }}></div>
                     </div>
                   </div>
                   <h3 style={{ fontWeight: 600, color: '#111827', fontSize: '1rem', fontFamily: "Archivo" }}>Evaluating Job Match</h3>
-                  <p style={{ fontSize: '0.75rem', color: '#6366F1', fontFamily: "Inter" }}>Processing...</p>
+                  <p style={{ fontSize: '0.75rem', color: '#F59E0B', fontFamily: "Inter" }}>Processing...</p>
                   <div className="progress-line" style={{ width: '50%' }}></div>
                 </div>
                 
@@ -4319,7 +4323,7 @@ if (step === 'analyzing') {
                 overflow: 'hidden'
               }}>
                 <p key={currentFactIndex} style={{ fontSize: '0.875rem', color: '#565D6D', animation: 'factFade 8s ease-in-out infinite', transition: 'opacity 0.5s ease-in-out', fontFamily: "Inter" }}>
-                  <span style={{ fontWeight: 700, color: '#6366F1' }}>Did you know?</span> {didYouKnowFacts[currentFactIndex]}
+                  <span style={{ fontWeight: 700, color: '#F59E0B' }}>Did you know?</span> {didYouKnowFacts[currentFactIndex]}
                 </p>
               </div>
             </div>
@@ -4339,7 +4343,7 @@ if (step === 'analyzing') {
                   width: '8px',
                   height: '8px',
                   borderRadius: '50%',
-                  background: '#818CF8',
+                  background: '#FB923C',
                   animation: 'converge1 2s ease-out infinite',
                   animationDelay: '0s'
                 }}></div>
@@ -4351,7 +4355,7 @@ if (step === 'analyzing') {
                   width: '8px',
                   height: '8px',
                   borderRadius: '50%',
-                  background: '#A78BFA',
+                  background: '#F97316',
                   animation: 'converge1 2s ease-out infinite',
                   animationDelay: '0.2s',
                   transformOrigin: '128px 96px'
@@ -4389,7 +4393,7 @@ if (step === 'analyzing') {
                   width: '8px',
                   height: '8px',
                   borderRadius: '50%',
-                  background: '#818CF8',
+                  background: '#FB923C',
                   animation: 'converge2 2s ease-out infinite',
                   animationDelay: '0.8s',
                   transformOrigin: '-128px 96px'
@@ -4402,7 +4406,7 @@ if (step === 'analyzing') {
                   width: '8px',
                   height: '8px',
                   borderRadius: '50%',
-                  background: '#A78BFA',
+                  background: '#F97316',
                   animation: 'converge2 2s ease-out infinite',
                   animationDelay: '1s',
                   transformOrigin: '-128px -96px'
@@ -4424,10 +4428,10 @@ if (step === 'analyzing') {
                 position: 'absolute',
                 width: '112px',
                 height: '112px',
-                background: 'linear-gradient(to bottom right, #6366F1, #9333EA)',
+                background: 'linear-gradient(to bottom right, #F59E0B, #EA580C)',
                 borderRadius: '50%',
                 animation: 'pulseCore 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                boxShadow: '0 0 20px rgba(99, 102, 241, 0.5), 0 0 40px rgba(99, 102, 241, 0.8)',
+                boxShadow: '0 0 20px rgba(245, 158, 11, 0.5), 0 0 40px rgba(245, 158, 11, 0.8)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -4440,7 +4444,7 @@ if (step === 'analyzing') {
               <h1 style={{ fontSize: '2rem', fontWeight: 700, color: '#111827', letterSpacing: '-0.025em', fontFamily: "Archivo" }}>
                 Finalizing Your Analysis...
               </h1>
-              <p style={{ fontSize: '1.125rem', color: '#6366F1', fontWeight: 500, fontFamily: "Inter" }}>Get Ready!</p>
+              <p style={{ fontSize: '1.125rem', color: '#F59E0B', fontWeight: 500, fontFamily: "Inter" }}>Get Ready!</p>
             </div>
             
             <div style={{ width: '100%', maxWidth: '512px' }}>
@@ -4463,12 +4467,12 @@ if (step === 'analyzing') {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'rgba(99, 102, 241, 0.1)',
+                    background: 'rgba(245, 158, 11, 0.1)',
                     borderRadius: '50%',
-                    border: '1px solid #6366F1',
+                    border: '1px solid #F59E0B',
                     animation: 'pulse 2s ease-in-out infinite'
                   }}>
-                    <span className="material-symbols-outlined" style={{ color: '#6366F1', fontSize: '16px' }}>psychology</span>
+                    <span className="material-symbols-outlined" style={{ color: '#F59E0B', fontSize: '16px' }}>psychology</span>
                   </div>
                   <div>
                     <h3 style={{ fontWeight: 600, color: '#111827', fontFamily: "Archivo" }}>Synthesizing Improvements</h3>
@@ -4493,7 +4497,7 @@ if (step === 'analyzing') {
                       style={{
                         width: '8px',
                         height: `${height * 4}px`,
-                        background: idx < 5 ? '#4ADE80' : idx < 10 ? '#818CF8' : '#A78BFA',
+                        background: idx < 5 ? '#4ADE80' : idx < 10 ? '#FB923C' : '#F97316',
                         borderRadius: '0.25rem',
                         animation: `wavePulse 1.2s ease-in-out infinite`,
                         animationDelay: `${idx * 0.15}s`
@@ -4513,7 +4517,7 @@ if (step === 'analyzing') {
                 background: '#F9FAFB'
               }}>
                 <p key={currentFactIndex} style={{ fontSize: '0.875rem', color: '#565D6D', animation: 'factFade 8s ease-in-out infinite', transition: 'opacity 0.5s ease-in-out', fontFamily: "Inter" }}>
-                  <span style={{ fontWeight: 700, color: '#6366F1' }}>💡 Did you know?</span> {didYouKnowFacts[currentFactIndex]}
+                  <span style={{ fontWeight: 700, color: '#F59E0B' }}>💡 Did you know?</span> {didYouKnowFacts[currentFactIndex]}
                 </p>
               </div>
             </div>
@@ -4827,6 +4831,14 @@ if (step === 'analyzing') {
               } else if (linkType === 'kaggle' && url.includes('kaggle.com')) {
                 return link.url;
               } else if (linkType === 'email' && (url.startsWith('mailto:') || url.includes('@'))) {
+                // For email, prioritize extracting from link.text if it contains a valid email
+                // since link.url might have placeholder values like "x@gmail.com"
+                // The text field is more reliable as it comes directly from PDF extraction
+                const emailInText = link.text.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/i);
+                if (emailInText) {
+                  return emailInText[1].toLowerCase();
+                }
+                // Fallback to url if text doesn't have a valid email
                 return url.startsWith('mailto:') ? url.replace('mailto:', '') : url;
               }
             }
@@ -4857,6 +4869,14 @@ if (step === 'analyzing') {
           } else if (linkType === 'kaggle' && url.includes('kaggle.com')) {
             return link.url;
           } else if (linkType === 'email' && (url.startsWith('mailto:') || url.includes('@'))) {
+            // For email, prioritize extracting from link.text if it contains a valid email
+            // since link.url might have placeholder values like "x@gmail.com"
+            // The text field is more reliable as it comes directly from PDF extraction
+            const emailInText = link.text.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/i);
+            if (emailInText) {
+              return emailInText[1].toLowerCase();
+            }
+            // Fallback to url if text doesn't have a valid email
             return url.startsWith('mailto:') ? url.replace('mailto:', '') : url;
           } else if (linkType === 'portfolio' && (url.startsWith('http://') || url.startsWith('https://'))) {
             // Only return if it's not a known social platform
@@ -5643,8 +5663,14 @@ if (step === 'analyzing') {
     }
       
       const formattedLines = [];
+      const skipIndices = new Set(); // Track lines to skip (standalone URLs that were processed with certification entries)
       
       lines.forEach((line, idx) => {
+        // Skip lines that were already processed as part of a certification entry
+        if (skipIndices.has(idx)) {
+          return;
+        }
+        
         const trimmed = line.trim();
         if (!trimmed) {
         
@@ -5725,7 +5751,44 @@ if (step === 'analyzing') {
           const linkContent = trimmed.replace(/^Certificate Link:?\s*/i, '').trim();
           formattedLines.push({ type: 'certificate-link', content: linkContent, key: `cert-link-${idx}` });
         } else if (isCertificationEntry) {
-          formattedLines.push({ type: 'certification-entry', content: trimmed, key: `cert-${idx}` });
+          // Check for URL in current line first
+          let certUrl = null;
+          let certContent = trimmed;
+          let urlFoundOnCurrentLine = false;
+          
+          // Check for URL in parentheses or directly in the current line
+          const urlInParensMatch = certContent.match(/\(([^)]*https?:\/\/[^)]+)\)/i);
+          if (urlInParensMatch) {
+            certUrl = urlInParensMatch[1];
+            certContent = certContent.replace(/\([^)]*https?:\/\/[^)]+\)/gi, '').trim();
+            urlFoundOnCurrentLine = true;
+          } else {
+            // Check for direct URL in current line
+            const directUrlMatch = certContent.match(/(https?:\/\/[^\s)]+)/i);
+            if (directUrlMatch) {
+              certUrl = directUrlMatch[1];
+              certContent = certContent.replace(directUrlMatch[0], '').trim();
+              urlFoundOnCurrentLine = true;
+            }
+          }
+          
+          // If no URL found in current line, check next line for standalone URL
+          if (!certUrl && idx + 1 < lines.length) {
+            const nextLine = lines[idx + 1].trim();
+            if (nextLine && /^https?:\/\/[^\s]+$/i.test(nextLine) && nextLine.length < 300) {
+              certUrl = nextLine;
+              skipIndices.add(idx + 1); // Mark next line to be skipped
+              urlFoundOnCurrentLine = false; // URL found on next line
+            }
+          }
+          
+          formattedLines.push({ 
+            type: 'certification-entry', 
+            content: certContent, 
+            url: certUrl,
+            urlOnCurrentLine: urlFoundOnCurrentLine,
+            key: `cert-${idx}` 
+          });
         } else if (isBullet) {
           // Remove bullet character and clean up (matching PDF logic)
           const bulletText = trimmed.replace(/^[•·\-*\d+.]\s*/, '');
@@ -5784,26 +5847,41 @@ if (step === 'analyzing') {
             );
           
           case 'project-title':
-            // Parse project title format: "Project Name | Technology | GitHub" or "Project Name | Technology"
+            // Parse project title format: 
+            // Type 1: "Project Name | Technology | https://github.com/..." - use "Link" as placeholder
+            // Type 2: "Project Name | Technology | GitHub: https://github.com/..." - use "GitHub" (text before colon) as placeholder
             const projectParts = item.content.split('|').map(p => p.trim());
             let projectName = '';
             let projectTech = '';
             let projectUrl = '';
-            let hasGitHubText = false;
+            let linkPlaceholder = 'Link'; // Default placeholder
             
-            // Check if any part contains "GitHub" or "Github" text
-            const githubTextIndex = projectParts.findIndex(part => /github/i.test(part));
-            if (githubTextIndex !== -1) {
-              hasGitHubText = true;
-              // Remove GitHub text from parts
-              projectParts.splice(githubTextIndex, 1);
+            // Find the part containing URL (could be direct URL or "Label: URL" format)
+            let urlPartIndex = -1;
+            for (let i = 0; i < projectParts.length; i++) {
+              const part = projectParts[i];
+              
+              // Check for Type 2: "Label: https://..."
+              const labelUrlMatch = part.match(/^([^:]+):\s*(https?:\/\/[^\s]+)/i);
+              if (labelUrlMatch) {
+                projectUrl = labelUrlMatch[2];
+                linkPlaceholder = labelUrlMatch[1].trim(); // Use the label as placeholder
+                urlPartIndex = i;
+                break;
+              }
+              
+              // Check for Type 1: direct URL
+              if (/^https?:\/\//i.test(part)) {
+                projectUrl = part;
+                linkPlaceholder = 'Link'; // Default for direct URL
+                urlPartIndex = i;
+                break;
+              }
             }
             
-            // Extract URL (usually the last part that starts with http)
-            const urlIndex = projectParts.findIndex(part => /^https?:\/\//i.test(part));
-            if (urlIndex !== -1) {
-              projectUrl = projectParts[urlIndex];
-              projectParts.splice(urlIndex, 1);
+            // Remove the URL part from projectParts
+            if (urlPartIndex !== -1) {
+              projectParts.splice(urlPartIndex, 1);
             }
             
             // Remaining parts: first is name, second (if exists) is technology
@@ -5828,12 +5906,12 @@ if (step === 'analyzing') {
               return normalizedTitle === normalizedAdded; // Exact match only
             });
             
-            // Find project-specific GitHub link based on project name (only if NOT a Coding Ninjas project)
-            if (!isAddedProject && (hasGitHubText || !projectUrl) && projectName && extractedLinks) {
+            // Find project-specific GitHub link based on project name (only if NOT a Coding Ninjas project and no URL found)
+            if (!isAddedProject && !projectUrl && projectName && extractedLinks) {
               const projectSpecificUrl = findProjectGitHubLink(projectName, extractedLinks);
               if (projectSpecificUrl) {
                 projectUrl = projectSpecificUrl;
-                hasGitHubText = true; // Ensure we show the link
+                linkPlaceholder = 'Link'; // Default when found from extractedLinks
               }
             }
             
@@ -5842,22 +5920,18 @@ if (step === 'analyzing') {
                 <span>
                   {projectName}
                   {projectTech && <span style={{ fontWeight: 400, color: '#4b5563' }}> | {projectTech}</span>}
-                  {/* Only show GitHub link if NOT a Coding Ninjas project */}
-                  {!isAddedProject && (projectUrl || hasGitHubText) && (
+                  {/* Only show link if NOT a Coding Ninjas project and URL exists */}
+                  {!isAddedProject && projectUrl && (
                     <>
                       {(projectName || projectTech) && <span style={{ fontWeight: 400, color: '#4b5563' }}> | </span>}
-                      {projectUrl ? (
                       <a 
                         href={projectUrl} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         style={{ color: '#2563eb', textDecoration: 'none', fontSize: '10pt', fontWeight: 400 }}
                       >
-                        GitHub
+                        {linkPlaceholder}
                       </a>
-                      ) : (
-                        <span style={{ fontWeight: 400, color: '#4b5563' }}>GitHub</span>
-                      )}
                     </>
                   )}
                 </span>
@@ -5893,7 +5967,7 @@ if (step === 'analyzing') {
               </div>
             );
           
-          case 'certificate-link':
+          case 'certificate-link': {
             // Extract URL from the link content or try to find from extractedLinks
             let certUrl = null;
             const certUrlMatch = item.content.match(/https?:\/\/[^\s]+/i);
@@ -6014,10 +6088,28 @@ if (step === 'analyzing') {
                 )}
               </div>
             );
+          }
           
-          case 'certification-entry':
-            // Parse certification format: "Title | Organization | Year" or "Organization" or "Organization\nTitle | Year"
-            const certParts = item.content.split('|').map(p => p.trim());
+          case 'certification-entry': {
+            // Parse certification format: 
+            // "Title – Organization (https://...)" or "Title | Organization | Year" or "Organization"
+            // URL may be in the current line or on the next line
+            let certText = item.content;
+            let certUrl = item.url || null; // Use URL from processing (already extracted)
+            const urlOnCurrentLine = item.urlOnCurrentLine !== false; // Default to true if not specified
+            
+            // Parse the remaining text (format: "Title | Organization | Year" or "Title – Organization")
+            // Handle both pipe and dash separators
+            let certParts = [];
+            if (certText.includes('|')) {
+              certParts = certText.split('|').map(p => p.trim()).filter(Boolean);
+            } else if (certText.includes('–') || certText.includes('-')) {
+              // Handle dash separator (en dash or hyphen)
+              certParts = certText.split(/[–-]/).map(p => p.trim()).filter(Boolean);
+            } else {
+              certParts = [certText];
+            }
+            
             let certTitle = '';
             let certOrg = '';
             let certYear = '';
@@ -6028,32 +6120,63 @@ if (step === 'analyzing') {
               certOrg = certParts[1];
               certYear = certParts[2];
             } else if (certParts.length === 2) {
-              // Format: "Title | Year" or "Organization | Year"
+              // Format: "Title | Year" or "Organization | Year" or "Title – Organization"
               // Check if second part is a year
               if (/^\d{4}/.test(certParts[1])) {
                 certTitle = certParts[0];
                 certYear = certParts[1];
               } else {
-                certOrg = certParts[0];
-                certTitle = certParts[1];
+                // Likely "Title – Organization" format
+                certTitle = certParts[0];
+                certOrg = certParts[1];
               }
             } else {
-              // Single part - likely organization name
-              certOrg = certParts[0];
+              // Single part - could be title or organization
+              certTitle = certParts[0];
             }
             
             return (
               <div key={item.key} style={{ fontSize: '10pt', fontWeight: 700, color: '#000000', marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
-                {certTitle && <span>{certTitle}</span>}
-                {certOrg && (
-                  <span>
-                    {certTitle ? ' | ' : ''}
-                    {certOrg}
-                  </span>
+                <div>
+                  {certTitle && <span>{certTitle}</span>}
+                  {certOrg && (
+                    <span>
+                      {certTitle ? ' | ' : ''}
+                      {certOrg}
+                    </span>
+                  )}
+                  {certYear && <span> | {certYear}</span>}
+                  {/* If URL was found on current line, embed it inline */}
+                  {certUrl && urlOnCurrentLine && (
+                    <span>
+                      {' '}
+                      <a 
+                        href={certUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 400 }}
+                      >
+                        View Certificate
+                      </a>
+                    </span>
+                  )}
+                </div>
+                {/* If URL was found on next line, show it on a separate line */}
+                {certUrl && !urlOnCurrentLine && (
+                  <div style={{ marginTop: '0.1rem', fontWeight: 400 }}>
+                    <a 
+                      href={certUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 400 }}
+                    >
+                      View Certificate
+                    </a>
+                  </div>
                 )}
-                {certYear && <span> | {certYear}</span>}
               </div>
             );
+          }
           
           case 'bullet':
             // Parse markdown bold (**text**) for skills and other sections
@@ -6543,12 +6666,12 @@ if (step === 'analyzing') {
               {
                   label: 'Original ATS',
                   value: analysisData?.original?.ats_score || 0,
-                  color: '#3B82F6'
+                  color: '#F59E0B'
               },
               {
                   label: 'Improved ATS',
                   value: analysisData?.improved?.ats_score || 0,
-                  color: '#F59E0B'
+                  color: '#3B82F6'
               }
             ].map((stat, idx) => (
                 <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -6734,7 +6857,7 @@ if (step === 'analyzing') {
                           }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                               <p style={{ margin: 0, fontWeight: 600, color: '#0f172a', fontSize: '0.875rem' }}>{skill.skill}</p>
-                              <p style={{ margin: 0, fontWeight: 700, color: '#6366F1', fontSize: '1rem' }}>{skill.percentage}%</p>
+                              <p style={{ margin: 0, fontWeight: 700, color: '#F59E0B', fontSize: '1rem' }}>{skill.percentage}%</p>
                             </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                               <span style={{ 
@@ -6928,30 +7051,40 @@ if (step === 'analyzing') {
                 Recommended Learning Modules
                     </h3>
               
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-                gap: '1.5rem' 
-              }}>
-                {(curriculumModulesUsed && curriculumModulesUsed.length > 0
+              {(() => {
+                const modules = curriculumModulesUsed && curriculumModulesUsed.length > 0
                   ? curriculumModulesUsed
                   : [
                       { module: "Power BI Basics" },
                       { module: "Advanced SQL for Data Analysis" },
                       { module: "Python for Data Science" },
                       { module: "Tableau Data Visualization" }
-                    ]
-                ).map((course, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      background: 'white',
-                      borderRadius: '12px',
-                      overflow: 'hidden',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                      transition: 'box-shadow 0.2s',
-                      cursor: 'pointer'
-                    }}
+                    ];
+                const moduleCount = modules.length;
+                const isLessThanFour = moduleCount < 4;
+                
+                return (
+                  <div style={{ 
+                    display: isLessThanFour ? 'flex' : 'grid',
+                    gridTemplateColumns: isLessThanFour ? 'none' : 'repeat(auto-fit, minmax(250px, 1fr))',
+                    justifyContent: isLessThanFour ? 'flex-start' : 'stretch',
+                    flexWrap: isLessThanFour ? 'wrap' : 'nowrap',
+                    gap: '1.5rem' 
+                  }}>
+                    {modules.map((course, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          background: 'white',
+                          borderRadius: '12px',
+                          overflow: 'hidden',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                          transition: 'box-shadow 0.2s',
+                          cursor: 'pointer',
+                          width: isLessThanFour ? '320px' : '100%',
+                          maxWidth: isLessThanFour ? '320px' : 'none',
+                          flexShrink: 0
+                        }}
                     onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.15)'}
                     onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)'}
                   >
@@ -6991,7 +7124,9 @@ if (step === 'analyzing') {
                     </div>
                         </div>
                       ))}
-                    </div>
+                  </div>
+                );
+              })()}
                   </div>
           </div>
 
@@ -7062,7 +7197,7 @@ if (step === 'analyzing') {
       }}>
         <Clock style={{ width: '20px', height: '20px', color: '#6b7280' }} />
         <span style={{ fontWeight: 500, fontSize: '0.9rem', fontFamily: 'Inter' }}>
-          Estimated Completion: 3-6 Weeks
+          Estimated Completion: 6 Months
         </span>
                     </div>
       

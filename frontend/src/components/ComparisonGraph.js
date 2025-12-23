@@ -2,14 +2,14 @@ import React from 'react';
 import './ComparisonGraph.css';
 
 const ComparisonGraph = () => {
-  const months = [0, 2, 4, 6, 8, 10, 12];
-  const conventional = [0, 15, 30, 40, 50, 65, 85];
-  const codingNinjas = [0, 25, 55, 75, 100, 100, 100];
+  const months = [0, 1, 2, 3, 4, 5, 6];
+  const conventional = [0, 8, 15, 22, 30, 35, 40];
+  const codingNinjas = [0, 12, 25, 40, 55, 100, 100];
 
-  const chartWidth = 760;
-  const chartHeight = 360;
-  const padding = { top: 40, right: 20, bottom: 60, left: 60 };
-  const maxX = 12;
+  const chartWidth = 680;
+  const chartHeight = 340;
+  const padding = { top: 80, right: 20, bottom: 60, left: 60 };
+  const maxX = 6;
   const maxY = 100;
 
   const xScale = (month) =>
@@ -23,7 +23,7 @@ const ComparisonGraph = () => {
       .map((val, idx) => `${xScale(months[idx]).toFixed(1)},${yScale(val).toFixed(1)}`)
       .join(' ');
 
-  const calloutPoint = { month: 8, value: 100 };
+  const calloutPoint = { month: 5, value: 100 };
 
   return (
     <section className="graph-cta-section">
@@ -136,7 +136,7 @@ const ComparisonGraph = () => {
               stroke="#b4b9c6"
               strokeDasharray="4 4"
             />
-            <g transform={`translate(${xScale(calloutPoint.month) - 95}, ${yScale(calloutPoint.value) - 70})`}>
+            <g transform={`translate(${xScale(calloutPoint.month) - 100}, ${yScale(calloutPoint.value) - 75})`}>
               <rect width="220" height="56" rx="8" fill="#e0e7ff" stroke="#4338ca" strokeWidth="1.5" />
               <text x="14" y="20" fill="#6b7280" fontSize="11" fontWeight="600">
                 Key Insight
@@ -145,7 +145,7 @@ const ComparisonGraph = () => {
                 100% Job-Ready in just 5 months
               </text>
               <text x="14" y="52" fill="#6b7280" fontSize="11">
-                vs 85% in 12 months
+                vs 40% in 6 months
               </text>
             </g>
 

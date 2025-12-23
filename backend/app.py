@@ -16,6 +16,7 @@ from openai import OpenAI
 import fitz  # PyMuPDF
 import docx
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 
 # Load environment variables from .env file (if exists) or from environment
 config = dotenv_values('.env')
@@ -166,6 +167,108 @@ def load_analysis_by_level():
 
 # Load analysis data at startup
 ANALYSIS_BY_LEVEL = load_analysis_by_level()
+
+# ============================================================================
+# COMMON RETRY HELPER FOR LLM CALLS
+# ============================================================================
+
+def response_retry_helper(
+    model,
+    messages,
+    response_format,
+    temperature,
+    initial_max_tokens,
+    retry_max_tokens,
+    method_name="unknown_method"
+):
+    """
+    Common retry helper for LLM API calls with automatic token increase on failure.
+    
+    Args:
+        model: OpenAI model name (e.g., "gpt-4.1-mini")
+        messages: List of message dicts for the API call
+        response_format: Response format dict (e.g., {"type": "json_object"})
+        temperature: Temperature setting
+        initial_max_tokens: Initial max_tokens value
+        retry_max_tokens: Max_tokens value to use on retry
+        method_name: Name of the calling method (for logging/tracking)
+    
+    Returns:
+        tuple: (response_content, retry_attempted)
+            - response_content: The parsed JSON content (if response_format is json_object) or raw content
+            - retry_attempted: Boolean indicating if a retry was performed
+    
+    Raises:
+        ValueError: If response is still truncated after retry
+        json.JSONDecodeError: If JSON parsing fails after retry
+    """
+    retry_attempted = False
+    content = None
+    
+    for attempt in range(2):  # Initial attempt + 1 retry
+        try:
+            current_max_tokens = retry_max_tokens if attempt > 0 else initial_max_tokens
+            
+            if attempt > 0:
+                print(f"  → Retry attempt {attempt} for {method_name} with max_tokens={current_max_tokens}")
+            
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                response_format=response_format,
+                temperature=temperature,
+                max_tokens=current_max_tokens
+            )
+            
+            content = response.choices[0].message.content
+            
+            # Check if response was truncated
+            if response.choices[0].finish_reason == "length":
+                if attempt == 0:
+                    retry_attempted = True
+                    print(f"  ⚠ Response truncated in {method_name}, retrying with max_tokens={retry_max_tokens}...")
+                    continue
+                else:
+                    raise ValueError(f"Response still truncated after retry in {method_name}. Consider increasing retry_max_tokens.")
+            
+            # Parse JSON if response_format is json_object
+            if response_format.get("type") == "json_object":
+                parsed_content = json.loads(content)
+                if retry_attempted:
+                    print(f"  ✓ {method_name} succeeded after retry")
+                return parsed_content, retry_attempted
+            else:
+                if retry_attempted:
+                    print(f"  ✓ {method_name} succeeded after retry")
+                return content, retry_attempted
+                
+        except json.JSONDecodeError as e:
+            if attempt == 0:
+                retry_attempted = True
+                print(f"  ⚠ JSON parse error in {method_name} (attempt {attempt + 1}), retrying with max_tokens={retry_max_tokens}...")
+                print(f"    Error: {e}")
+                print(f"    Response preview (first 500 chars): {content[:500] if content else 'None'}...")
+                continue
+            else:
+                # Log the partial response for debugging
+                print(f"  ✗ Failed to parse JSON in {method_name} after retry")
+                print(f"    Error: {e}")
+                print(f"    Response length: {len(content) if content else 0}")
+                print(f"    Response preview (first 500 chars): {content[:500] if content else 'None'}...")
+                print(f"    Response preview (last 500 chars): {content[-500:] if content else 'None'}...")
+                raise
+        except Exception as e:
+            if attempt == 0 and (isinstance(e, ValueError) or "truncated" in str(e).lower()):
+                retry_attempted = True
+                print(f"  ⚠ Error in {method_name} (attempt {attempt + 1}), retrying with max_tokens={retry_max_tokens}...")
+                print(f"    Error: {e}")
+                continue
+            else:
+                print(f"  ✗ Error in {method_name}: {e}")
+                raise
+    
+    # Should not reach here, but just in case
+    raise ValueError(f"Unexpected error in {method_name} retry logic")
 
 # Store extract-text response in memory for use in step 3
 EXTRACT_TEXT_DATA = {}
@@ -371,6 +474,231 @@ def format_analysis_for_prompt(analysis_data):
 # STEP 2: Analyze Resume + Determine Data Analytics Level (AI Call #1)
 # ============================================================================
 
+# Helper functions for experience level calculation
+def parse_date(date_str, current_date_str):
+    """
+    Parse date string with robust error handling
+    Handles: "Feb 2023", "Aug. 2024", "Present", "MM/YYYY", etc.
+    Returns (year, month) tuple or None
+    """
+    if not date_str:
+        return None
+    
+    # Normalize: strip, remove punctuation
+    date_str = date_str.strip().replace('.', '').replace(',', '')
+    
+    # Handle special keywords
+    if date_str.lower() in ["present", "current", "ongoing"]:
+        try:
+            current_date = datetime.strptime(current_date_str, "%B %Y")
+            return (current_date.year, current_date.month)
+        except:
+            now = datetime.now()
+            return (now.year, now.month)
+    
+    # Month mapping (comprehensive)
+    month_names = {
+        'january': 1, 'jan': 1,
+        'february': 2, 'feb': 2,
+        'march': 3, 'mar': 3,
+        'april': 4, 'apr': 4,
+        'may': 5,
+        'june': 6, 'jun': 6,
+        'july': 7, 'jul': 7,
+        'august': 8, 'aug': 8,
+        'september': 9, 'sep': 9, 'sept': 9,
+        'october': 10, 'oct': 10,
+        'november': 11, 'nov': 11,
+        'december': 12, 'dec': 12
+    }
+    
+    # Try "Month Year" format first (most common in resumes)
+    parts = date_str.split()
+    if len(parts) >= 2:
+        month_str = parts[0].lower()
+        year_str = parts[-1]
+        
+        if month_str in month_names:
+            try:
+                year = int(year_str)
+                if 1900 <= year <= 2100:
+                    return (year, month_names[month_str])
+            except ValueError:
+                pass
+    
+    # Try "MM/YYYY" or "MM-YYYY"
+    for sep in ['/', '-']:
+        if sep in date_str:
+            parts = date_str.split(sep)
+            if len(parts) == 2:
+                try:
+                    month = int(parts[0])
+                    year = int(parts[1])
+                    if 1 <= month <= 12 and 1900 <= year <= 2100:
+                        return (year, month)
+                except ValueError:
+                    pass
+    
+    # Try "YYYY-MM" ISO format
+    if '-' in date_str:
+        parts = date_str.split('-')
+        if len(parts) == 2:
+            try:
+                year = int(parts[0])
+                month = int(parts[1])
+                if 1 <= month <= 12 and 1900 <= year <= 2100:
+                    return (year, month)
+            except ValueError:
+                pass
+    
+    # Fallback: Try to extract year only (assume month 1)
+    if date_str.isdigit() and len(date_str) == 4:
+        year = int(date_str)
+        if 1900 <= year <= 2100:
+            return (year, 1)
+    
+    # If all parsing attempts fail
+    return None
+
+def calculate_role_duration(start_date_str, end_date_str, current_date_str):
+    """
+    Calculate duration in years between two dates
+    Returns (months, years) tuple or None
+    """
+    start = parse_date(start_date_str, current_date_str)
+    end = parse_date(end_date_str, current_date_str)
+    
+    if not start or not end:
+        return None
+    
+    start_year, start_month = start
+    end_year, end_month = end
+    
+    # Calculate total months
+    total_months = (end_year - start_year) * 12 + (end_month - start_month)
+    
+    # Validation: total_months should be non-negative
+    if total_months < 0:
+        return None
+    
+    # Convert to years (round to 2 decimals)
+    years = round(total_months / 12, 2)
+    
+    return (total_months, years)
+
+def calculate_experience_level(qualifying_roles, current_date_str):
+    """
+    Step 2: Python calculates experience duration and classifies level
+    """
+    if not qualifying_roles:
+        return {
+            'experience_level': 'Fresher',
+            'total_years': 0.0,
+            'total_months': 0,
+            'reasoning': 'No qualifying Data Analytics roles found.',
+            'calculations': []
+        }
+    
+    # Filter out internships
+    non_intern_roles = [r for r in qualifying_roles if not r.get('is_internship', False)]
+    
+    if not non_intern_roles:
+        return {
+            'experience_level': 'Fresher',
+            'total_years': 0.0,
+            'total_months': 0,
+            'reasoning': 'No qualifying non-internship Data Analytics roles found.',
+            'calculations': []
+        }
+    
+    calculations = []
+    total_months = 0
+    
+    for role in non_intern_roles:
+        title = role.get('title', 'Unknown')
+        company = role.get('company', 'Unknown')
+        start_date = role.get('start_date', '')
+        end_date = role.get('end_date', '')
+        
+        duration = calculate_role_duration(start_date, end_date, current_date_str)
+        
+        if duration:
+            months, years = duration
+            total_months += months
+            calculations.append({
+                'role': f"{title} at {company}",
+                'start_date': start_date,
+                'end_date': end_date,
+                'months': months,
+                'years': years
+            })
+    
+    # Calculate total years
+    total_years = round(total_months / 12, 2)
+    
+    # Classify experience level
+    if total_years <= 1.00:
+        experience_level = 'Fresher'
+    elif total_years <= 3.00:
+        experience_level = 'Intermediate'
+    else:
+        experience_level = 'Experienced'
+    
+    # Build reasoning string
+    calc_details = []
+    for calc in calculations:
+        calc_details.append(f"{calc['role']} ({calc['start_date']} - {calc['end_date']}) = {calc['months']} months = {calc['years']} years")
+    
+    reasoning = f"Total: {total_months} months = {total_years} years. " + "; ".join(calc_details)
+    
+    return {
+        'experience_level': experience_level,
+        'total_years': total_years,
+        'total_months': total_months,
+        'reasoning': reasoning,
+        'calculations': calculations
+    }
+
+def clean_date_string(date_str):
+    """Normalize date string format"""
+    if not date_str:
+        return date_str
+    
+    # Keep special keywords as-is
+    if date_str.lower() in ["present", "current", "ongoing"]:
+        return date_str
+    
+    # Remove periods and commas
+    cleaned = date_str.replace('.', '').replace(',', '').strip()
+    
+    # Standardize month abbreviations
+    month_map = {
+        'Jan': 'Jan', 'January': 'Jan',
+        'Feb': 'Feb', 'February': 'Feb',
+        'Mar': 'Mar', 'March': 'Mar',
+        'Apr': 'Apr', 'April': 'Apr',
+        'May': 'May',
+        'Jun': 'Jun', 'June': 'Jun',
+        'Jul': 'Jul', 'July': 'Jul',
+        'Aug': 'Aug', 'August': 'Aug',
+        'Sep': 'Sep', 'Sept': 'Sep', 'September': 'Sep',
+        'Oct': 'Oct', 'October': 'Oct',
+        'Nov': 'Nov', 'November': 'Nov',
+        'Dec': 'Dec', 'December': 'Dec'
+    }
+    
+    parts = cleaned.split()
+    if len(parts) >= 2:
+        month_str = parts[0]
+        # Try to normalize month
+        for full, abbr in month_map.items():
+            if month_str.lower() == full.lower():
+                parts[0] = abbr
+                break
+        return ' '.join(parts)
+    
+    return cleaned
+
 def analyze_original_resume(resume_text, analysis_dict):
     """
     Two-call prompt chain for step 2.
@@ -402,73 +730,293 @@ def analyze_original_resume(resume_text, analysis_dict):
     fresher_top_skills = _top_skills_by_level(analysis_dict.get("fresher"))
     intermediate_top_skills = _top_skills_by_level(analysis_dict.get("intermediate"))
     experienced_top_skills = _top_skills_by_level(analysis_dict.get("experienced"))
+    current_date = datetime.now().strftime("%B %Y")
+
+# -----------------------
+# CALL 1a: Experience Identification (Two-Step Approach)
+# -----------------------
+    def _extract_da_roles():
+        """
+        Step 1: Use LLM to extract qualifying DA roles
+        """
+        system_message = f"""
+# Role
+You are a Data Analytics resume role extractor.
+
+# Task
+Extract ALL Data Analytics roles from the resume.
+
+# Instructions
+
+## What Qualifies as a Data Analytics Role
+
+A role qualifies ONLY if it meets BOTH criteria:
+1. **Job Title** contains: "Data Analyst", "Data Associate", "Business Analyst", "Analytics", 
+   "Data Scientist", "BI Analyst", "Data Engineer", "Analytics Associate", or similar data-focused titles
+
+2. **Core responsibilities** involve: data analysis, reporting, dashboards, 
+   SQL queries, ETL, data pipelines, statistical analysis, or predictive modeling as PRIMARY duties
+
+**Important Distinctions:**
+- Product Manager/Program Manager/Project Manager roles that USE data tools (PowerBI, Excel) for decision-making are NOT Data Analytics roles
+- Roles where data analysis is a SUPPORTING skill (not the primary function) should NOT be counted
+- **CRITICAL: Flag any role with "Intern" in the title as internship (is_internship: true)**
+- When in doubt, prioritize the job title over responsibilities
+
+## Extraction Rules
+
+- Extract role title, company name, start date, and end date
+- **CRITICAL DATE FORMAT:** Clean up dates before returning:
+ - Remove periods: "Aug." → "Aug"
+ - Remove commas: "Aug, 2024" → "Aug 2024"
+ - Standardize format to: "Month Year" (e.g., "Aug 2024", "February 2023")
+ - Keep "Present", "Current", "Ongoing" as-is
+- Flag if the role is an internship (title contains "Intern")
+- DO NOT perform any calculations
+- DO NOT classify experience level
+
+# Output (JSON only)
+{{
+  "qualifying_roles": [
+    {{
+      "title": "Data Analyst",
+      "company": "Company Name",
+      "start_date": "Feb 2023",
+      "end_date": "Present",
+      "is_internship": false
+    }}
+  ],
+  "non_qualifying_roles": [
+    {{
+      "title": "Software Engineer",
+      "company": "Company X",
+      "reason": "Primary focus is software development, not data analytics (max 20 words)"
+    }}
+  ]
+}}
+"""
+
+        user_prompt = f"""
+Resume:
+{resume_text}
+
+Current date: {current_date}
+
+Extract all Data Analytics roles following the criteria above. Include start and end dates exactly as they appear in the resume.
+"""
+
+        response = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.0,
+            max_tokens=400
+        )
+        
+        return json.loads(response.choices[0].message.content)
+
+    def _analyze_experience_level():
+        """
+        Call 1a: Complete workflow - Extract roles → Calculate → Classify
+        Two-Step Approach: LLM extracts roles, Python calculates duration
+        """
+        # Step 1: LLM extracts roles (no calculations)
+        extraction_result = _extract_da_roles()
+        
+        # Clean dates in qualifying_roles
+        for role in extraction_result.get('qualifying_roles', []):
+            role['start_date'] = clean_date_string(role.get('start_date', ''))
+            role['end_date'] = clean_date_string(role.get('end_date', ''))
+        
+        # Step 2: Python calculates experience (100% accurate)
+        qualifying_roles = extraction_result.get('qualifying_roles', [])
+        
+        # Check if Experience section exists (if no roles found and no non-qualifying roles, might be missing section)
+        if not qualifying_roles and not extraction_result.get('non_qualifying_roles', []):
+            return {
+                'experience_level': 'Fresher',
+                'experience_considered': [],
+                'experience_reasoning': 'Experience section not found in the resume.'
+            }
+        
+        calculation_result = calculate_experience_level(qualifying_roles, current_date)
+        
+        # Format for output
+        experience_considered = [
+            f"{calc['role']} ({calc['start_date']} - {calc['end_date']})"
+            for calc in calculation_result['calculations']
+        ]
+        
+        return {
+            'experience_level': calculation_result['experience_level'],
+            'experience_considered': experience_considered,
+            'experience_reasoning': calculation_result['reasoning']
+        }
 
     # -----------------------
-    # CALL 1: Gap Analysis
+    # CALL 1b: Skill Analysis
     # -----------------------
-    system_message_gap = """
+    def _analyze_skills(experience_level):
+        """Call 1b: Analyze skills (needs experience_level from Call 1a)"""
+        # Determine which market skills to use based on experience level
+        detected_level = (experience_level or "fresher").lower()
+        level_key = "fresher" if "fresh" in detected_level else (
+            "intermediate" if "inter" in detected_level else "experienced"
+        )
+        
+        if level_key == "fresher":
+            market_top_skills = fresher_top_skills
+        elif level_key == "intermediate":
+            market_top_skills = intermediate_top_skills
+        else:
+            market_top_skills = experienced_top_skills
+
+        system_message_skills = """
 # Role
 You are a Data Analytics resume gap analyzer.
 
 # Task
-Analyze the resume and identify what the candidate has vs what they need.
+Analyze the candidate's technical skills and identify gaps.
 
-# Instructions (3 steps only)
-## Step 1: Determine Experience Level
-- Calculate DA work duration from explicit dates only.
-- user_level rules:
-  - ≤1.00 years -> Fresher
-  - 1.00-3.00 years -> Intermediate
-  - >3.00 years -> Experienced
-## Step 2: Analyze Skills
-- Extract and normalize all technical skills -> has_skills.
-- Compare against provided market top 10 for the detected level.
-- missing_skills = market top 10 NOT in has_skills.
-- Filter missing_skills to only those in CURRICULUM_SKILLS.
-## Step 3: Evaluate Projects
-- List projects found.
-- Mark projects irrelevant if they lack DA tools/tech or are off-domain.
+# Instructions
+
+**IMPORTANT NOTE**: Before starting the analysis, make sure to check if the relevant sections exists in the resume. If not, then skip the step and output empty values.
+
+## Step 1: Analyze Skills
+- Extract and normalize all technical skills mentioned in resume → has_skills
+- Compare against provided market top 10 for the detected experience level
+- missing_skills = market top 10 NOT in has_skills
+- Filter missing_skills to only those in CURRICULUM_SKILLS
 
 # Output (JSON only)
-{
-  "user_level": "...",
-  "experience_reasoning": "...",
-  "skills_analysis": {
+{{
+  "skills_analysis": {{
     "has_skills": [],
     "missing_skills": []
-  },
-  "projects_analysis": {
-    "projects_to_keep": [],
-    "projects_to_remove": []
-  }
-}
+  }}
+}}
 """
 
-    user_prompt_gap = f"""
+        user_prompt_skills = f"""
 Resume:
 {resume_text}
 
-Market Top 10 Skills by Level (use only detected level):
-- Fresher: {fresher_top_skills}
-- Intermediate: {intermediate_top_skills}
-- Experienced: {experienced_top_skills}
+Detected Experience Level: {experience_level}
+
+Market Top 10 Skills for {level_key} level:
+{market_top_skills}
 
 CURRICULUM_SKILLS = {CURRICULUM_SKILLS_FOCUS}
 
-Note: Use exact skills from resume for has_skills; never add unmentioned skills. Only keep missing_skills that are also in CURRICULUM_SKILLS.
+IMPORTANT REMINDERS:
+1. Before starting the analysis, always check if the relevant sections exists in the resume. 
+2. If section not found, then skip the step and output empty values for the respective sections. Do not make up any information.
+3. Use exact skills from resume for has_skills; never add unmentioned skills
+4. Only keep missing_skills that are also in CURRICULUM_SKILLS
 """
 
-    response_gap = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[
-            {"role": "system", "content": system_message_gap},
-            {"role": "user", "content": user_prompt_gap}
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.0,
-        max_tokens=800
-    )
-    gap_analysis = json.loads(response_gap.choices[0].message.content)
+        response_skills = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[
+                {"role": "system", "content": system_message_skills},
+                {"role": "user", "content": user_prompt_skills}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.0,
+            max_tokens=400
+        )
+        return json.loads(response_skills.choices[0].message.content)
+
+    # -----------------------
+    # CALL 1c: Project Analysis
+    # -----------------------
+    def _analyze_projects():
+        """Call 1c: Analyze projects (independent, can run in parallel with skills)"""
+        system_message_projects = """
+# Role
+You are a Data Analytics resume gap analyzer.
+
+# Task
+Evaluate projects listed in the resume.
+
+# Instructions
+
+CRITICAL NOTE: Before starting the analysis, make sure to check if the relevant sections exists in the resume. If not, then skip the step and output empty values for the respective sections.
+
+## Step 1: Evaluate Projects
+**CRITICAL: First check if a "Projects" section exists in the resume.**
+- Look for section headers like "Projects", "PROJECTS", "Personal Projects", "Academic Projects", etc.
+- If NO Projects section exists in the resume:
+  - Output empty arrays: projects_to_keep = [], projects_to_remove = []
+  - Do NOT treat work experience bullet points as projects
+  - Do NOT extract accomplishments from Experience section as projects
+- If a Projects section EXISTS:
+  - Evaluate each project listed in that section:
+    - If it demonstrates data analytics skills (SQL, Python, data pipelines, visualization, analysis), add to projects_to_keep
+    - If it's purely project management, UI/UX, agile ceremonies, or lacks data/analytics work, add to projects_to_remove
+
+# Output (JSON only)
+{{
+  "projects_analysis": {{
+    "projects_to_keep": [],
+    "projects_to_remove": []
+  }}
+}}
+"""
+
+        user_prompt_projects = f"""
+Resume:
+{resume_text}
+
+IMPORTANT REMINDERS:
+1. Before starting the analysis, always check if the relevant sections exists in the resume. 
+2. If section not found, then skip the step and output empty values for the respective sections. Do not make up any information.
+3. For Projects analysis: ONLY evaluate items from a dedicated "Projects" section. If no Projects section exists, output empty arrays. DO NOT treat work experience bullet points as projects.
+"""
+
+        response_projects = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[
+                {"role": "system", "content": system_message_projects},
+                {"role": "user", "content": user_prompt_projects}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.0,
+            max_tokens=500
+        )
+        return json.loads(response_projects.choices[0].message.content)
+
+    # Execute calls: 1a first, then 1b and 1c in parallel
+    print("Call 1a: Analyzing experience level...")
+    experience_result = _analyze_experience_level()
+    experience_level = experience_result.get("experience_level", "Fresher")
+    experience_considered = experience_result.get("experience_considered", [])
+    experience_reasoning = experience_result.get("experience_reasoning", "")
+    
+    print(f"Call 1a complete. Experience level: {experience_level}")
+    print(f"Experience considered: {experience_considered}")
+    print(f"Experience reasoning: {experience_reasoning}")
+    print("Call 1b & 1c: Running skill and project analysis in parallel...")
+    
+    # Run calls 1b and 1c in parallel
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        skills_future = executor.submit(_analyze_skills, experience_level)
+        projects_future = executor.submit(_analyze_projects)
+        
+        skills_result = skills_future.result()
+        projects_result = projects_future.result()
+    
+    print("Call 1b & 1c complete.")
+    
+    # Merge all results into gap_analysis
+    gap_analysis = {
+        **experience_result,
+        **skills_result,
+        **projects_result
+    }
 
     # ----------------------------
     # CALL 2: Assessment & Scoring
@@ -507,18 +1055,18 @@ Apply scoring guidelines for job relevance and ATS scores.
     "present_keywords": ["CTEs", "Window Functions", "Pandas", "NumPy", ...],
     "missing_keywords": ["Power Query", "Data Modeling", ...]
   },
-  "ats_analysis": {"reasoning": "1-2 sentence max"},
-  "scores": {"job_relevance_score": 0, "ats_score": 0, "score_reasoning": "1-2 sentence max"},
+  "ats_analysis": {"reasoning": "50 words max"},
+  "scores": {"job_relevance_score": 0, "ats_score": 0, "score_reasoning": "35 words max"},
   "job_market_analysis": {
     "jobs_analyzed": <integer>,
     "top_skills": ["Skill (appears in X%) - Demand: ..."]
   },
-  "analysis_summary": "1-2 sentence max"
+  "analysis_summary": "35 words max"
 }
 """
 
     # choose market data for detected level
-    detected_level = (gap_analysis.get("user_level") or "fresher").lower()
+    detected_level = (gap_analysis.get("experience_level") or "fresher").lower()
     level_key = "fresher" if "fresh" in detected_level else (
         "intermediate" if "inter" in detected_level else "experienced"
     )
@@ -575,9 +1123,9 @@ Scoring Guidelines:
     if 'job_market_analysis' in analysis:
         analysis['job_market_analysis'].pop('jobs_analyzed_at_level', None)
 
-    user_level = analysis.get('user_level', 'Unknown')
+    experience_level = analysis.get('experience_level', 'Unknown')
     print("Analysis complete:")
-    print(f"  - User level: {user_level}")
+    print(f"  - User Experience Level: {experience_level}")
 
     return analysis
 
@@ -619,12 +1167,12 @@ Examine each skill in has_skills and determine if it can be enhanced with advanc
 2. Check if those advanced topics are already in present_keywords
 3. If advanced topics are MISSING from present_keywords → add to skills_to_enhance
 4. If advanced topics are ALREADY in present_keywords → skip (already covered)
-5. Never add basic concepts to skills_to_enhance if user_level is Intermediate or Experienced.
+5. Never add basic concepts to skills_to_enhance if experience_level is Intermediate or Experienced.
 
 **Example:**
 
 Given:
-- user_level: "Intermediate"
+- experience_level: "Intermediate"
 - has_skills: ["Excel", "SQL", "Python"]
 - present_keywords: ["Power Query", "Pandas", "Numpy", "Matplotlib"]
 
@@ -632,7 +1180,7 @@ Internal Reasoning:
 - Excel → Advanced: "Power Query" → Found in present_keywords → Skip
 - SQL → Advanced: "CTEs, Window Functions" → NOT found in present_keywords → Include
 - Python → Advanced: "NumPy, Pandas, Matplotlib" → Found in present_keywords → Skip
-- Python → Advanced: "Object Oriented Programming (OOP)" → user_level is Intermediate → Skip
+- Python → Advanced: "Object Oriented Programming (OOP)" → experience_level is Intermediate → Skip
 
 Output:
 skills_to_enhance = [{"base": "SQL","enhanced": "Advanced SQL (CTEs, Window Functions)","module": "Analytics with SQL"}]
@@ -654,21 +1202,16 @@ Using projects_analysis:
 ### 2b. Add Curriculum Case Studies as Projects
 Rules:
 - Count removed projects: len(projects_to_remove)
-- Add EXACTLY that many case studies from curriculum
+- Add EXACTLY that many case studies from curriculum (if len(projects_to_remove) = 0 then skip this step)
 - Select case studies that:
  - Support skills being added/enhanced
- - Match user_level complexity
+ - Match experience_level complexity
  - Are most relevant to DA roles
-
-Example:
-- If projects_to_remove = ["Project A", "Project B"] (count=2)
-- Then projects_to_add must have EXACTLY 2 entries
 
 For each case study:
 - name: Use exact case study name from curriculum
 - module: Module name where case study is from
 - technologies: Skills from that module
-- description: 2-3 sentences about the analysis
 
 ### 2c. Keep Relevant Projects
 - Retain all projects from projects_to_keep with original description
@@ -680,21 +1223,6 @@ For each case study:
 - Order: Most relevant to DA first
 - Balance: User's existing projects + curriculum case studies
 
-### Output Format
-"project_strategy": {
-    "projects_removed": ["project name"],
-    "projects_kept": ["project name"],
-    "projects_added": [
-      {
-        "name": "Case Study Name",
-        "module": "...",
-        "technologies": [],
-        "description": "..."
-      }
-    ],
-    "final_project_count": 3
-  }
-
 ### Module Tracking
 For each module used:
 - module: Exact name from curriculum
@@ -702,20 +1230,6 @@ For each module used:
 - projects_included: List case studies used as projects
 - skills_added_from_module: New skills from this module
 - skills_enhanced_by_module: Enhanced skills using this module
-
-### Output Format
-"curriculum_mapping": {
-    "modules_used": [
-      {
-        "module": "Exact module name",
-        "addresses_gaps": ["skill1", "skill2"],
-        "projects_included": ["case study name"],
-        "keywords_addressed": ["keyword1", "keyword2"],
-        "skills_added_from_module": ["skill1"],
-        "skills_enhanced_by_module": ["base → enhanced"]
-      }
-    ]
-  }
 
 # Output Schema (JSON only)
 {
@@ -731,14 +1245,7 @@ For each module used:
   "project_strategy": {
     "projects_removed": ["project name"],
     "projects_kept": ["project name"],
-    "projects_added": [
-      {
-        "name": "Case Study Name",
-        "module": "...",
-        "technologies": [],
-        "description": "..."
-      }
-    ],
+    "projects_added": ["case study name"],
     "final_project_count": 3
   },
   "curriculum_mapping": {
@@ -756,13 +1263,13 @@ For each module used:
 # Critical Rules
 - Verify each skill appears in ONLY ONE place (enhance OR add)
 - Python libraries are enhancements if Python exists, otherwise Python is added
-- Select projects matching user_level complexity exactly
+- Select projects matching experience_level complexity exactly
 - Track ALL modules used in curriculum_mapping
 """
     has_skills = gap_analysis.get('skills_analysis', {}).get('has_skills', [])
     missing_skills = gap_analysis.get('skills_analysis', {}).get('missing_skills', [])
     present_keywords = gap_analysis.get('keywords_analysis', {}).get('present_keywords', [])
-    user_level = gap_analysis.get('user_level', 'Unknown')
+    experience_level = gap_analysis.get('experience_level', 'Unknown')
     projects_to_remove = gap_analysis.get('projects_analysis', {}).get('projects_to_remove', [])
     projects_to_keep = gap_analysis.get('projects_analysis', {}).get('projects_to_keep', [])
     
@@ -778,8 +1285,8 @@ For each module used:
 - **present_keywords:** 
 {json.dumps(present_keywords)}
 
-- **User level:** 
-{user_level}
+- **User Experience Level:** 
+{experience_level}
 
 ## Project Info
 - **Projects to remove (count={len(projects_to_remove)}):** 
@@ -792,7 +1299,8 @@ For each module used:
 {json.dumps(curriculum_data, indent=2)}
 """
 
-    response = client.chat.completions.create(
+    # Use retry helper with initial max_tokens=1024, retry with max_tokens=2048
+    strategy, retry_attempted = response_retry_helper(
         model="gpt-4.1-mini",
         messages=[
             {"role": "system", "content": system_message},
@@ -800,15 +1308,10 @@ For each module used:
         ],
         response_format={"type": "json_object"},
         temperature=0.0,  # Fully deterministic
-        max_tokens=1024
+        initial_max_tokens=1024,
+        retry_max_tokens=1500,
+        method_name="prompt_1_strategy_generation"
     )
-    
-    strategy = json.loads(response.choices[0].message.content)
-    
-    # Validation checks
-    if 'modules_used' not in strategy:
-        print("⚠️ Warning: modules_used missing from strategy")
-        strategy['modules_used'] = []
     
     print("✓ Prompt 1: Strategy generation complete")
     print(f"  - Skills to enhance: {len(strategy.get('skill_strategy', {}).get('skills_to_enhance', []))}")
@@ -853,21 +1356,26 @@ def prompt_2_resume_writing(resume_data, strategy, gap_analysis):
     - Unknown or irrelevant links → EXCLUDE from resume
 
     # Template Structure
-    Follow this ATS-friendly structure:
+    Exactly follow this ATS-friendly structure for the improved resume:
 
     ## HEADER SECTION
     [FULL NAME - from original, all caps]
-    Email | Phone | Location | LinkedIn (URL if present) | GitHub (URL if present) 
-    [Only use the contact info present in the original resume and embedded links, remove the contact info that is not present originally]
+    Email (if present) | Phone (if present) | Location (if present) | LinkedIn (URL if present) | GitHub (URL if present) | Kaggle (URL if present)
+    [Remove contact info which is not present]
 
     ## PROFESSIONAL SUMMARY
-    2 sentences maximum: [Professional Title based on user_level] with expertise in [top 2-4 skills including enhanced ones], experienced in [domain/projects], seeking to leverage [skills] for [DA role type].
+    2 sentences maximum: [Professional Title based on experience_level] with expertise in [top 2-4 skills including enhanced ones], experienced in [domain/projects], seeking to leverage [skills] for [DA role type].
 
     ## TECHNICAL SKILLS
-    • **Programming & Languages:** [list skills with enhancements grouped]
-    • **Data Visualization:** [Power BI, Excel, etc.]
-    • **Soft Skills:** Communication, Teamwork, Problem Solving, Time Management, etc.
-    • **Other Tools:** [Jupyter, etc.]
+    • Programming & Languages: [list skills with enhancements grouped]
+    • Data Visualization: [Power BI, Excel, etc.]
+    • Soft Skills: Communication, Teamwork, Problem Solving, Time Management, etc.
+    • Other Tools: [Jupyter, etc.]
+
+    **CRITICAL RULES:**
+    - Use these EXACT category names
+    - Do NOT combine categories or create new categories beyond the five mentioned above
+    - If any category has no values to add, REMOVE the category from the resume
 
     {CONDITIONAL_SECTION - see decision tree below}
 
@@ -876,25 +1384,36 @@ def prompt_2_resume_writing(resume_data, strategy, gap_analysis):
     1. Include ONLY graduation (Bachelor's) OR post-graduation (Master's) education
     2. EXCLUDE: High school, Class X, Class XII, school education
     3. Format per entry:
-    Line 1: University/College name (bold)
+    Line 1: University/College name
     Line 2: Degree name | Year range
     Line 3: CGPA/GPA (if present)
 
     ## PROJECTS
-    - First add projects according to the projects_to_keep field from the original resume, if empty then skip this step.
-    - Secondly add projects according to the projects_to_add field from the improvement strategy, if empty then skip this step.
+    **Structure per project:**
+    - For original projects retain original details and use the following format:
+     - Project Title | Technologies | Link | Date (skip fields if not present)
+     - Retain original description broken into 3 points.
+    - For curriculum case studies, use the following format:
+     - Project Title | Core Technology | (skip fields if not present)
+     - 3 points description highlighting analysis, Technologies & Techniques used, outcomes, etc.
+
+    **CRITICAL:**
+    - NO invented metrics ("processed 50,000 records" if not in original)
+    - NO invented outcomes ("increased revenue 15%" if not stated)
+    - Use case study details if from curriculum
+    - Use original details if from user's resume
+    - For improving the skills and projects rely only on the improvement strategy provided.
 
     ## CERTIFICATIONS
-    - List all original certifications.
-    - If a certificate link is provided, append it in parentheses exactly as given.
-    - Example: Data Analytics Certificate – Coding Ninjas (certificate link)
-    - If no Coding Ninjas Data Analytics certification exists in the original resume:
-     - At the end add: "Data Analytics | Coding Ninjas | {CURRENT_YEAR}" 
+    - First list all certifications from original resume exactly as they appear
+    - Then check if ANY certification contains 'Coding Ninjas' AND 'Data Analytics'
+     - If YES: Stop here
+     - If NO: Add 'Data Analytics | Coding Ninjas | {CURRENT_YEAR}' as the last entry
 
     ## Professional Experience Decision Tree
 
-    **STEP 1: Check User Level**
-    IF user_level = "Fresher" → SKIP this entire section, go directly to Education
+    **STEP 1: Check User Experience Level**
+    IF experience_level = "Fresher" → SKIP this entire section, go directly to Education
 
     **STEP 2: Check if Original Has Work Experience**
     Look for sections: "Experience", "Work Experience", "Professional Experience", "Employment"
@@ -912,39 +1431,22 @@ def prompt_2_resume_writing(resume_data, strategy, gap_analysis):
     - Admin roles without analytics
 
     **STEP 4: Final Decision**
-    IF (user_level != "Fresher") AND (original has work experience) AND (role is DA-related):
+    IF (experience_level != "Fresher") AND (original has work experience) AND (role is DA-related):
     - INCLUDE Professional Experience section (keep original content, add keywords naturally)
     ELSE:
     - SKIP section entirely
 
-    ## TECHNICAL SKILLS FORMAT (MANDATORY)
+    ### Professional Experience FORMAT (MANDATORY)
+    - For professional experience, use the following format for each role:
+    If any field is not present, skip it.
+     - Company Name | Duration 
+     - Role | Location
+     - Retain original format of the description.
 
-    • **Programming & Languages:** [list skills with enhancements grouped]
-    • **Data Visualization:** [Power BI, Excel, etc.]
-    • **Soft Skills:** Communication, Teamwork, Problem Solving, Time Management, etc.
-    • **Other Tools:** [Jupyter, etc.]
-
-    **CRITICAL:**
-    - Use these EXACT category names with bold formatting: **Category Name:**
-    - Do NOT combine categories
-    - Do NOT create new categories beyond the five mentioned above
-
-    ## Project Description Templates
-
-    **Structure per project:**
-    - For original projects retain original details and use the following format:
-     - Format: Project Title | Technologies | Link | Date (skip fields if not present)
-     - Project Description: Retain original description.
-    - For curriculum case studies, use the following format:
-     - Format: Project Title | Technologies | (skip fields if not present)
-     - Project Description: Bullet points (3 points) highlighting analysis, Technologies & Techniques used, outcomes, etc.
-
-    **CRITICAL:**
-    - NO invented metrics ("processed 50,000 records" if not in original)
-    - NO invented outcomes ("increased revenue 15%" if not stated)
-    - Use case study details if from curriculum
-    - Use original details if from user's resume
-    - For improving the skills and projects rely only on the improvement strategy provided.
+     Example:
+     **Pacer Staffing** | Feb 2023 - Present
+     **Data Analyst** | Noida
+     For description retain original format.
 
     ## FINAL VERIFICATION CHECKLIST
 
@@ -961,7 +1463,6 @@ def prompt_2_resume_writing(resume_data, strategy, gap_analysis):
     ## Technical Skills:
     - NO arrows (→) anywhere
     - Skills grouped: "Python (NumPy, Pandas)" not separate
-    - Categories bolded: **Programming:**
     - skills and projects should be based on the improvement strategy provided.
 
     ## Projects:
@@ -983,7 +1484,7 @@ def prompt_2_resume_writing(resume_data, strategy, gap_analysis):
 
     resume_text_content = resume_data.get('text', '')
     resume_links = resume_data.get('links', [])
-    user_level = gap_analysis.get('user_level', 'Unknown')
+    experience_level = gap_analysis.get('experience_level', 'Unknown')
     
     # Extract strategy components for clarity
     skills_enhance = strategy.get('skill_strategy', {}).get('skills_to_enhance', [])
@@ -1023,18 +1524,18 @@ def prompt_2_resume_writing(resume_data, strategy, gap_analysis):
     {json.dumps(strategy.get('curriculum_mapping', {}), indent=2)}
 
     ## User Context
-    - User Level: {user_level}
+    - User Experience Level: {experience_level}
     - Current Year: {CURRENT_YEAR}
     """
 
     response = client.chat.completions.create(
-        model="gpt-4.1-mini",
+        model="gpt-4.1",
         messages=[
             {"role": "system", "content": system_message},
             {"role": "user", "content": user_prompt}
         ],
-        temperature=0.1,  # Lower for more consistency
-        max_tokens=2500
+        temperature=0.0,  # Lower for more consistency
+        max_tokens=2000
     )
     
     improved_text = response.choices[0].message.content.strip()
@@ -1165,14 +1666,14 @@ Cap at 100%.
 # Critical Rules
 - Extract classifications from strategy - NEVER invent from resume
 - Score ONLY the improved resume (not a comparison)
-- Apply scoring rubrics strictly based on user level
+- Apply scoring rubrics strictly based on user experience level
 - Counts must match strategy exactly
 """
 
     # Context for scoring
     missing_skills = gap_analysis.get('skills_analysis', {}).get('missing_skills', [])
     total_missing = len(missing_skills)
-    user_level = gap_analysis.get('user_level', 'Unknown')
+    experience_level = gap_analysis.get('experience_level', 'Unknown')
     
     # Get market analysis for scoring context
     job_market = gap_analysis.get('job_market_analysis', {})
@@ -1187,7 +1688,7 @@ Cap at 100%.
 {improved_resume_text}
 
 ## Context for Scoring
-- User level: {user_level}
+- User Experience Level: {experience_level}
 - Market top skills: {json.dumps(top_skills[:10])}
 - Jobs analyzed: {job_market.get('jobs_analyzed', 0)}
 - Total gaps addressed: {total_missing}
@@ -1271,9 +1772,16 @@ Instructions:
     
     return result
 
-def generate_improved_resume(resume_data, gap_analysis, curriculum_text):
+def generate_improved_resume(resume_data, gap_analysis, curriculum_text, stop_after_prompt2=False, run_id=None):
     """
     Generate improved resume using prompt chaining (3 sequential prompts).
+    
+    Args:
+        resume_data: Resume data with text and links
+        gap_analysis: Analysis from step 2
+        curriculum_text: Curriculum text for prompts
+        stop_after_prompt2: If True, stop after Prompt 2 and return early
+        run_id: Optional run ID for logging
     """
     if not gap_analysis:
         raise ValueError("Step 2 analysis is required")
@@ -1290,7 +1798,19 @@ def generate_improved_resume(resume_data, gap_analysis, curriculum_text):
     
     # PROMPT 2: Resume Writing
     print("  → Prompt 2: Writing improved resume...")
+    # Set run_id for logging
+    if run_id:
+        prompt_2_resume_writing._current_run_id = run_id
     improved_resume_text = prompt_2_resume_writing(resume_data, strategy, gap_analysis)
+    
+    # If stopping after Prompt 2, return early
+    if stop_after_prompt2:
+        print("  → Stopping after Prompt 2 (as requested)")
+        return {
+            "improved_resume_text": improved_resume_text,
+            "strategy": strategy,
+            "stopped_after_prompt2": True
+        }
     
     # PROMPT 3: Tracking & Scoring
     print("  → Prompt 3: Classifying changes and scoring...")
@@ -1633,8 +2153,8 @@ def analyze_resume():
         original_analysis = analyze_original_resume(resume_text, ANALYSIS_BY_LEVEL)
         
         # Log results
-        user_level = original_analysis.get('user_level', 'Unknown')
-        print(f"✓ User level detected: {user_level}")
+        experience_level = original_analysis.get('experience_level', 'Unknown')
+        print(f"✓ User Experience Level detected: {experience_level}")
         
         # Return minimal response - only what's needed for Step 3
         # All analysis data is in full_analysis (no top-level duplicates)
@@ -1706,14 +2226,27 @@ def generate_improved_resume_endpoint():
         print("Step 3: Generating improved resume with curriculum mapping (Prompt Chaining: 3 sequential prompts)...")
         print(f"✓ Received resume_data from frontend with text ({len(resume_text)} chars) and {len(resume_links)} links")
         
+        # Check if we should stop after Prompt 2 (for stability testing)
+        stop_after_prompt2 = data.get('stop_after_prompt2', False)
+        run_id = data.get('run_id', None)
         
         # Generate improved resume + curriculum mapping (AI Call #2)
         # Pass resume_data (full object with text and links) to LLM
         improved_result = generate_improved_resume(
             resume_data,  # Pass full JSON object containing both text and links
             original_analysis,
-            curriculum_text
+            curriculum_text,
+            stop_after_prompt2=stop_after_prompt2,
+            run_id=run_id
         )
+        
+        # If stopped after Prompt 2, return early with just the improved text
+        if stop_after_prompt2:
+            return jsonify({
+                "improved_resume_text": improved_result['improved_resume_text'],
+                "run_id": run_id,
+                "stopped_after_prompt2": True
+            })
         
         # Extract curriculum mapping and improved resume from result
         curriculum_mapping = improved_result['curriculum_mapping']
@@ -1739,7 +2272,7 @@ def generate_improved_resume_endpoint():
                 "ats_score": original_analysis.get('scores', {}).get('ats_score', 0),
                 "has_skills": original_analysis.get('skills_analysis', {}).get('has_skills', []),
                 "missing_skills": original_analysis.get('skills_analysis', {}).get('missing_skills', []),
-                "user_level": original_analysis.get('user_level', ''),
+                "experience_level": original_analysis.get('experience_level', ''),
                 "level_reasoning": original_analysis.get('level_reasoning', ''),
                 "analysis_summary": original_analysis.get('analysis_summary', '')
             },
