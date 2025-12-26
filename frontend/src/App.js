@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AlertCircle, Briefcase, ArrowLeft, CheckCircle, XCircle, UploadCloud, Clock, Lock, ChevronLeft, ChevronRight, GraduationCap } from 'lucide-react';
+import { AlertCircle, Briefcase, ArrowLeft, CheckCircle, XCircle, UploadCloud, Clock, Lock, ChevronLeft, ChevronRight, GraduationCap, ChevronDown, ChevronUp } from 'lucide-react';
 import { config } from './config';
 import './App.css';
 import jsPDF from 'jspdf';
@@ -1241,6 +1241,10 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
       
       const trimmed = line.trim();
       if (!trimmed) {
+        // Skip breaks in projects section to avoid excessive spacing between projects
+        if (sectionType === 'projects') {
+          return; // Don't create break elements in projects section
+        }
         if (idx > 0 && idx < lines.length - 1 && lines[idx - 1].trim() && lines[idx + 1].trim()) {
           formattedLines.push({ type: 'break', key: `break-${idx}` });
         }
@@ -1284,7 +1288,7 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
       
       // Check for certificate link line (with or without colon)
       const isCertificateLinkLine = sectionType === 'certifications' && 
-                                    /^Certificate Link:?\s*$/i.test(trimmed);
+                                    /^Certificate Link:?\s*/i.test(trimmed);
       
       // Check for certification entry - format: "Title | Organization | Year" or "Organization"
       const isCertificationEntry = sectionType === 'certifications' && 
@@ -1431,7 +1435,24 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
     const bulletMargin = '0.2rem';
     const textMargin = '0.2rem';
     
-    return formattedLines.map((item) => {
+    return formattedLines.map((item, itemIdx) => {
+      // Check if previous item is a break or bullet (for spacing logic)
+      const prevItem = itemIdx > 0 ? formattedLines[itemIdx - 1] : null;
+      const hasBreakBefore = prevItem?.type === 'break';
+      const prevIsBullet = prevItem?.type === 'bullet';
+      
+      // For project titles, look backwards to find the last relevant item (bullet or project-title)
+      let lastRelevantItem = null;
+      if (item.type === 'project-title' && itemIdx > 0) {
+        for (let i = itemIdx - 1; i >= 0; i--) {
+          const checkItem = formattedLines[i];
+          if (checkItem.type === 'bullet' || checkItem.type === 'project-title' || checkItem.type === 'break') {
+            lastRelevantItem = checkItem;
+            break;
+          }
+        }
+      }
+      
       switch (item.type) {
         case 'break':
           return <br key={item.key} />;
@@ -1537,8 +1558,30 @@ const ResumeComparison = ({ analysisData, fileUrl, fileType, formatResumeText })
             }
           }
           
+          // Determine spacing: if previous item is a bullet, this is a new project (need spacing)
+          // If previous is another project-title, also need spacing
+          // If it's the first item or has break before, minimal spacing
+          let projectMarginTop = '0.8rem'; // Default spacing between projects - increased for visibility
+          if (itemIdx === 0) {
+            projectMarginTop = '0'; // First project in section
+          } else if (lastRelevantItem) {
+            if (lastRelevantItem.type === 'bullet') {
+              projectMarginTop = '0.8rem'; // New project after bullets - increased visual separation
+            } else if (lastRelevantItem.type === 'project-title') {
+              projectMarginTop = '0.8rem'; // Project after another project - consistent spacing
+            } else if (lastRelevantItem.type === 'break') {
+              projectMarginTop = '0.1rem'; // Minimal if break before (though breaks are skipped in projects)
+            }
+          } else if (hasBreakBefore) {
+            projectMarginTop = '0.1rem'; // Minimal if break before
+          } else if (prevIsBullet) {
+            projectMarginTop = '0.8rem'; // New project after bullets
+          } else if (prevItem?.type === 'project-title') {
+            projectMarginTop = '0.8rem'; // Project after another project
+          }
+          
           return (
-            <div key={item.key} style={{ fontSize: '10pt', fontWeight: 700, color: '#000000', marginTop: sectionSpacing, marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
+            <div key={item.key} style={{ fontSize: '10pt', fontWeight: 700, color: '#000000', marginTop: projectMarginTop, marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
               <span>
                 {projectName}
                 {projectTech && <span style={{ fontWeight: 400, color: '#4b5563' }}> | {projectTech}</span>}
@@ -2642,6 +2685,10 @@ const ResumeAnalyzer = () => {
   const [, setLinkedinUploadProgress] = useState(0);
   const [linkedinUploadSuccess, setLinkedinUploadSuccess] = useState(false);
 
+  // Projects descriptions state
+  const [projectsDescriptions, setProjectsDescriptions] = useState({});
+  const [expandedProjects, setExpandedProjects] = useState(new Set());
+
   // Array of "Did you know?" facts for stages 2 and 3
   const didYouKnowFacts = [
     "Resumes with a professional summary are 70% more likely to be read by recruiters than those without.",
@@ -2681,6 +2728,23 @@ const ResumeAnalyzer = () => {
         materialLink.parentNode.removeChild(materialLink);
       }
     };
+  }, []);
+
+  // Load projects descriptions on component mount
+  useEffect(() => {
+    fetch('/projects-descriptions.json')
+      .then(response => response.json())
+      .then(data => {
+        // Create a map of project name to description for easy lookup
+        const descriptionsMap = {};
+        data.projects.forEach(project => {
+          descriptionsMap[project.name] = project.description;
+        });
+        setProjectsDescriptions(descriptionsMap);
+      })
+      .catch(error => {
+        console.error('Error loading projects descriptions:', error);
+      });
   }, []);
 
   // Cycle through "Did you know?" facts during stages 2 and 3 only
@@ -5673,7 +5737,10 @@ if (step === 'analyzing') {
         
         const trimmed = line.trim();
         if (!trimmed) {
-        
+          // Skip breaks in projects section to avoid excessive spacing between projects
+          if (sectionType === 'projects') {
+            return; // Don't create break elements in projects section
+          }
           if (idx > 0 && idx < lines.length - 1 && lines[idx - 1].trim() && lines[idx + 1].trim()) {
             formattedLines.push({ type: 'break', key: `break-${idx}` });
           }
@@ -5721,7 +5788,7 @@ if (step === 'analyzing') {
         
         // Check for certificate link line (with or without colon)
         const isCertificateLinkLine = sectionType === 'certifications' && 
-                                      /^Certificate Link:?\s*$/i.test(trimmed);
+                                      /^Certificate Link:?\s*/i.test(trimmed);
         
         // Check for certification entry - format: "Title | Organization | Year" or "Organization"
         const isCertificationEntry = sectionType === 'certifications' && 
@@ -5806,7 +5873,24 @@ if (step === 'analyzing') {
       const bulletMargin = compact ? '0.1rem' : '0.2rem';
       const textMargin = compact ? '0.1rem' : '0.2rem';
       
-      return formattedLines.map((item) => {
+      return formattedLines.map((item, itemIdx) => {
+        // Check if previous item is a break or bullet (for spacing logic)
+        const prevItem = itemIdx > 0 ? formattedLines[itemIdx - 1] : null;
+        const hasBreakBefore = prevItem?.type === 'break';
+        const prevIsBullet = prevItem?.type === 'bullet';
+        
+        // For project titles, look backwards to find the last relevant item (bullet or project-title)
+        let lastRelevantItem = null;
+        if (item.type === 'project-title' && itemIdx > 0) {
+          for (let i = itemIdx - 1; i >= 0; i--) {
+            const checkItem = formattedLines[i];
+            if (checkItem.type === 'bullet' || checkItem.type === 'project-title' || checkItem.type === 'break') {
+              lastRelevantItem = checkItem;
+              break;
+            }
+          }
+        }
+        
         switch (item.type) {
           case 'break':
             return <br key={item.key} />;
@@ -5915,8 +5999,30 @@ if (step === 'analyzing') {
               }
             }
             
+            // Determine spacing: if previous item is a bullet, this is a new project (need spacing)
+            // If previous is another project-title, also need spacing
+            // If it's the first item or has break before, minimal spacing
+            let projectMarginTop = '0.8rem'; // Default spacing between projects - increased for visibility
+            if (itemIdx === 0) {
+              projectMarginTop = '0'; // First project in section
+            } else if (lastRelevantItem) {
+              if (lastRelevantItem.type === 'bullet') {
+                projectMarginTop = '0.8rem'; // New project after bullets - increased visual separation
+              } else if (lastRelevantItem.type === 'project-title') {
+                projectMarginTop = '0.8rem'; // Project after another project - consistent spacing
+              } else if (lastRelevantItem.type === 'break') {
+                projectMarginTop = '0.1rem'; // Minimal if break before (though breaks are skipped in projects)
+              }
+            } else if (hasBreakBefore) {
+              projectMarginTop = '0.1rem'; // Minimal if break before
+            } else if (prevIsBullet) {
+              projectMarginTop = '0.8rem'; // New project after bullets
+            } else if (prevItem?.type === 'project-title') {
+              projectMarginTop = '0.8rem'; // Project after another project
+            }
+            
             return (
-              <div key={item.key} style={{ fontSize: '10pt', fontWeight: 700, color: '#000000', marginTop: sectionSpacing, marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
+              <div key={item.key} style={{ fontSize: '10pt', fontWeight: 700, color: '#000000', marginTop: projectMarginTop, marginBottom: textMargin, lineHeight: smallLineHeight, fontFamily: 'Helvetica, Arial, sans-serif' }}>
                 <span>
                   {projectName}
                   {projectTech && <span style={{ fontWeight: 400, color: '#4b5563' }}> | {projectTech}</span>}
@@ -6992,50 +7098,96 @@ if (step === 'analyzing') {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {analysisData.improved.projects_added.map((project, idx) => {
-                        return (
-                      <div
-                        key={idx}
-                        style={{
+                    const isExpanded = expandedProjects.has(project);
+                    const projectDescription = projectsDescriptions[project] || '';
+                    
+                    const toggleProject = () => {
+                      setExpandedProjects(prev => {
+                        const newSet = new Set(prev);
+                        if (newSet.has(project)) {
+                          newSet.delete(project);
+                        } else {
+                          newSet.add(project);
+                        }
+                        return newSet;
+                      });
+                    };
+                    
+                    return (
+                      <div key={idx}>
+                        <div
+                          style={{
                             display: 'flex',
                             alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '1rem',
+                            justifyContent: 'space-between',
+                            padding: '1rem',
                             border: '1px solid #e2e8f0', 
                             borderRadius: '8px', 
-                          background: '#f8fafc',
-                          transition: 'border-color 0.2s',
-                          cursor: 'pointer'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = '#cbd5e1';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = '#e2e8f0';
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <div style={{ color: '#64748b', display: 'flex', alignItems: 'center' }}>
-                            <Briefcase style={{ width: '20px', height: '20px' }} />
+                            background: '#f8fafc',
+                            transition: 'border-color 0.2s',
+                            cursor: 'pointer'
+                          }}
+                          onClick={toggleProject}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = '#cbd5e1';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = '#e2e8f0';
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
+                            <div style={{ color: '#64748b', display: 'flex', alignItems: 'center' }}>
+                              <Briefcase style={{ width: '20px', height: '20px' }} />
                             </div>
-                          <span style={{ fontSize: '0.875rem', color: '#0f172a', fontWeight: 500 }}>
-                            {project}
-                              </span>
+                            <span style={{ fontSize: '0.875rem', color: '#0f172a', fontWeight: 500 }}>
+                              {project}
+                            </span>
+                          </div>
+                          
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <span style={{ 
+                              padding: '0.25rem 0.75rem',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem', 
+                              fontWeight: 600,
+                              color: '#1e40af',
+                              background: '#dbeafe'
+                            }}>
+                              Added
+                            </span>
+                            {projectDescription && (
+                              <div style={{ color: '#64748b', display: 'flex', alignItems: 'center' }}>
+                                {isExpanded ? (
+                                  <ChevronUp style={{ width: '18px', height: '18px' }} />
+                                ) : (
+                                  <ChevronDown style={{ width: '18px', height: '18px' }} />
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                         
-                              <span style={{ 
-                          padding: '0.25rem 0.75rem',
-                          borderRadius: '6px',
-                                fontSize: '0.75rem', 
-                          fontWeight: 600,
-                          color: '#1e40af',
-                          background: '#dbeafe'
-                              }}>
-                          Added
-                              </span>
+                        {isExpanded && projectDescription && (
+                          <div
+                            style={{
+                              padding: '1rem',
+                              marginTop: '0.5rem',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '8px',
+                              background: '#ffffff',
+                              fontSize: '0.875rem',
+                              color: '#475569',
+                              lineHeight: '1.5',
+                              animation: 'fadeIn 0.2s ease-in'
+                            }}
+                          >
+                            {projectDescription}
                           </div>
-                        );
-                      })}
-                    </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </>
                 )}
                   </div>
@@ -7167,7 +7319,15 @@ if (step === 'analyzing') {
           marginBottom: '0.5rem',
           fontFamily: 'Archivo'
         }}>
-          <a style={{ color: '#111827', textDecoration: 'none' }} href="https://www.codingninjas.com/brochure/cn-job-bootcamp-data-analytics-with-genai-brochure" target="_blank" rel="noopener noreferrer">Data Analytics Foundations Track</a>
+          <a 
+            style={{ color: '#2563eb', textDecoration: 'none' }} 
+            href="https://www.codingninjas.com/brochure/cn-job-bootcamp-data-analytics-with-genai-brochure" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            title="Click to view the curriculum"
+          >
+            Data Analytics Foundations Track
+          </a>
         </h2>
         <p style={{
           color: '#6b7280',

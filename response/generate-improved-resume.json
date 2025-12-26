@@ -1,169 +1,60 @@
 {
   "original": {
-    "resume_text": "Swarnatrisha Ghosh\nGurgaon, Haryana\n 9476602015\n# ghoshswarna712@gmail.com\nï linkedin.com/in/swarnatrisha-ghosh\nEducation\nBirla Institute of Technology and Science, Pilani\nAug. 2019 – May 2023\nBachelor of pharmacy\nPilani, Rajasthan\nExperience\nCoding Ninjas\nGurgaon, Haryana\nProgram Associate – Data Analytics\nAug. 2024 – Present\n• Designed and deployed a daily admissions tracking dashboard that replaced manual bi-weekly logs, resulting in a 75%\nreduction in processing time and improved visibility into admissions, drops, and batch shifts\n• Optimized referral banners using NPS data, boosting referrals by 7% MoM with 80% attributed to promoters\n• Streamlined data flow, reducing dashboard turnaround from 7 to 3 days , cutting reporting time by 57%\n• Introduced an automated system enabling instructors to access schedules, feedback, and ratings independently,\nreducing manual follow-ups by the operations team and cutting communication time by 60%\n• Leveraged retention curve analysis and learner insights to uncover drop-off points , supporting strategies that\nboosted course completion rates.\nData Analytics Intern\nFeb. 2024 – Jul. 2024\n• Developed 30+ interactive top-tier learning sessions on SQL and Excel , along with 6+ case studies for various\nspecializations, employing diverse instructional techniques for tailored audience learning\n• Achieved exceptional ratings of 4.5+ and an increase of 30% audience engagement affirming the enduring quality\n• Effectively utilized Metabase to streamline query processes, analysis capabilities, and optimize decision-making\nMedTel Healthcare Pvt. Ltd.\nAug. 2022 – Dec. 2022\nGrowth Intern\nBangalore\n• Led funnel analysis to identify drop-offs, driving changes that boosted lead-to-sale conversions by 15% and\nimproved quarterly sales.\n• Designed interactive visualizations in Excel to present data trends over a period, facilitating easier comprehension\n• Created an Excel database to manage and analyze investor data, ensuring precise data accessibility decision makers\n• Implemented a social media strategy- WhatsApp Campaign , resulted in 10% increase in website visits within a month\n• Researched and generated compelling topics, crafted well-researched 5+ healthcare articles on latest topics for website.\nProjects\nReview on Zomato IPO | Finance\nAug. 2021 – Dec. 2021\n• Enhanced understanding of IPO procedures to contribute in gaining insights and understanding market sentiments\n• Conducted in-depth RHP analysis on financial statements, growth prospects, identifying key risks and opportunities\n• Presented thorough reports on company’s strengths, weaknesses and potential market performance post-IPO\nPositions of responsibility\nMentorship Lead | Peer Mentorship Program (PMP)\nAug. 2020 – May. 2021\n• Designed program structures with 50+ mentors to build a roadmap for 1000+ freshers to help various issues\n• Mentored group of 15+ mentees , ensuring a conducive environment for knowledge sharing and career advancement\nCore Member | North East cultural Association, BITS Pilani\nAug. 2019 – May. 2023\n• Managed footfall of 300+ in grubs and coordinated various event and cultural celebration to promote cultural identity\n• Increased the size of the association by 25% expanding the network and amplifying its influence within the community\nExtracurricular\nArt, Design and publicity (ADP)\nAug. 2019 – Jan. 2022\nCore Member\nBITS Pilani\n• Contributed in painting 4+ major panels , designed different artistic structures for display during fests\n• Monitored social media account - Instagram , to amplify brand presence and increase audience engagement\n• Mentored 15+ juniors on various artistic methods and provided constructive feedback encouraging skill development",
-    "job_relevance_score": 65,
-    "ats_score": 80,
+    "resume_text": "MOHAMMED YAHYA HUSSAIN\nData Analyst - 2 Years\nÑ Karnataka, India  +91-7349033579 # mohammedyahyahussain1998@gmail.com ï Linkedin Profile § GitHub Profile\nPROfiLE SUMMARY\nSeasoned Data Analyst with 2+ years experience in Python, SQL, and Power BI , specializing in EDA, KPI reporting, and\nvisualization to optimize data workflow for stakeholders to help in decision-making and enhance data-driven business\nperformance .\nEXPERIENCE\nSparklex Technologies\nAug 2023 – Present\nData Analyst\nBangalore, Karnataka\n• Monthly revenue trends revealed flat growth despite rising subscriptions, prompting an investigation into churn drivers and\ncustomer profitability.\n• Unified 4+ disparate datasets billing, usage, customer, support using SQL — leveraging joins, CTEs, and window functions —\nimproving data availability and reducing query time by.\n• Applied churn logic inactive >90 days, repeated late payments and performed data validation in Excel through pivots and\nformulas, improving confidence in the analysis.\n• Built 3 interactive Power BI dashboards with advanced DAX measures for churn percentage, Average Revenue Per User ARPU,\nand Customer Lifetime Value CLV, reducing dependency on manual Excel reports and accelerating decision-making.\n• Applied Python pandas, numpy, matplotlib to automate simple data preparation tasks and generate exploratory charts,\nproviding quick checks and visual insights that supported the main Excel and Power BI reporting.\n• Presented analysis of churn patterns and customer segments, providing clarity on key risk factors and contributing to\nretention improvement efforts.\n• Participated in regular meetings to resolve the issue and offered technical support to the team.\nPROJECTS\nPhonePe Digital Payments Dataset Python | GitHub\nSept 2025\n• Consolidated 2018–2021 multi-sheet payment datasets, applied Pandas/NumPy, ensuring standardized structure and\nreliable insights.\n• Evaluated state and district payment behavior, applied SQL-style grouping, uncovering demographic patterns and adoption\ncorrelations.\n• Automated Matplotlib visualizations, generated dynamic charts, enabling stakeholders to identify growth opportunities and\nmitigate churn.\nSocial Media Ad Campaign Performance | Power BI | Github\nSept 2025\n• Designed Power BI dashboard integrating 213M impressions data, enabling CTR and conversion insights across\ndemographics.\n• Analyzed demographic spend patterns using DAX, uncovering male 30–34 efficiency and female 45–49 inefficiency for budget\noptimization.\n• Exposed funnel drop-offs causing negative ROI , recommending spend reallocation and CTR improvements for campaign\nperformance.\nE Commerce | SQL | Github\nAug 2025\n• Analyzed 100K+ transactional records by designing complex SQL queries , revealing customer purchase trends .\n• Performed RFM(Recency, Frequency, and Monetar ) analysis for segmentation, classifying customers , and identifying churn\nrisks to guide proactive interventions.\n• Delivered actionable insights through SQL-driven retention strategies, boosting repeat purchases and enhancing\nengagement metrics significantly .\nCPI Inflation | Advanced Excel | Github\nJuly 2025\n• Analyzed CPI drivers by grouping categories, applied statistical formulas, delivered accurate contribution insights.\n• Developed automated Excel dashboards, integrated SUMIFS, VLOOKUP, pivots, enabled efficient data-driven comparisons.\n• Identified dominant contributors forecasted trends with models, supported strategic planning and inventory adjustments.\nKEY SKILLS\nData Analysis & Programming : Python (Pandas, NumPy, Matplotlib, Seaborn), Javascript, Excel, EDA, Statistical Analysis, Insight\nGeneration\nDatabase Management & Querying : SQL, MySQL, Joins, Aggregations, Subqueries, Windows Function & CTE’s\nBusiness Intelligence & Reporting : Power BI, Excel Dashboard, KPI Reporting , Reporting Automation\nSoft Skills & Tools : Analytical Thinking, Problem-Solving, Attention to Detail, Data Storytelling, Communication & Presentation\nSkills\nEDUCATION\nVisvesvaraya Technological University (VTU), Karnataka\n2018 – 2023\nBE in Computer Science\nCGPA: 7.47\nTRAINING AND CERTIfiCATIONS\nCoding Ninjas\n2024 – 2025\nData Analytics\nCertificate Link",
+    "job_relevance_score": 82,
+    "ats_score": 90,
     "has_skills": [
+      "Python",
+      "Pandas",
+      "NumPy",
+      "Matplotlib",
+      "Seaborn",
+      "Excel",
       "SQL",
-      "Excel"
+      "Power BI",
+      "DAX",
+      "EDA"
     ],
     "missing_skills": [
-      "Power BI",
-      "Python",
-      "NumPy",
-      "Pandas"
+      "Statistics",
+      "Power Query",
+      "Generative AI"
     ],
     "experience_level": "Intermediate",
     "level_reasoning": "",
-    "analysis_summary": "Resume shows solid SQL and Excel skills with measurable impact but lacks Python, Power BI, and advanced analytics tools, limiting competitiveness. ATS format is good but minor encoding issues exist."
+    "analysis_summary": "Resume demonstrates strong intermediate-level skills and relevant projects with quantification. Minor gaps in advanced tools and emerging technologies exist. ATS compatibility is high due to clean formatting and keyword usage."
   },
   "improved": {
-    "resume_text": "SWARNATRISHA GHOSH\nghoshswarna712@gmail.com | 9476602015 | Gurgaon, Haryana | https://www.linkedin.com/in/swarnatrisha-ghosh-8a1791197?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app\n\nPROFESSIONAL SUMMARY\nData Analytics Professional with expertise in Advanced SQL, Advanced Excel, Power BI, and Python, experienced in dashboard development, data visualization, and process optimization across EdTech and healthcare domains. Seeking to leverage analytical and technical skills to drive data-driven decision-making in a dynamic analytics role.\n\nTECHNICAL SKILLS\n• Programming & Languages: Python (NumPy, Pandas), Advanced SQL (CTEs, Window Functions, Stored Procedures, Triggers)\n• Data Visualization: Power BI, Advanced Excel (Power Query, AI Tools in Excel, Data Transformation)\n• Soft Skills: Communication, Teamwork, Problem Solving, Time Management\n• Other Tools: Metabase, Jupyter\n\nPROFESSIONAL EXPERIENCE\n\nCoding Ninjas | Aug. 2024 – Present\nProgram Associate – Data Analytics | Gurgaon, Haryana\n• Designed and deployed a daily admissions tracking dashboard that replaced manual bi-weekly logs, resulting in a 75% reduction in processing time and improved visibility into admissions, drops, and batch shifts.\n• Optimized referral banners using NPS data, boosting referrals by 7% MoM with 80% attributed to promoters.\n• Streamlined data flow, reducing dashboard turnaround from 7 to 3 days, cutting reporting time by 57%.\n• Introduced an automated system enabling instructors to access schedules, feedback, and ratings independently, reducing manual follow-ups by the operations team and cutting communication time by 60%.\n• Leveraged retention curve analysis and learner insights to uncover drop-off points, supporting strategies that boosted course completion rates.\n\nCoding Ninjas | Feb. 2024 – Jul. 2024\nData Analytics Intern | Gurgaon, Haryana\n• Developed 30+ interactive top-tier learning sessions on SQL and Excel, along with 6+ case studies for various specializations, employing diverse instructional techniques for tailored audience learning.\n• Achieved exceptional ratings of 4.5+ and an increase of 30% audience engagement affirming the enduring quality.\n• Effectively utilized Metabase to streamline query processes, analysis capabilities, and optimize decision-making.\n\nMedTel Healthcare Pvt. Ltd. | Aug. 2022 – Dec. 2022\nGrowth Intern | Bangalore\n• Led funnel analysis to identify drop-offs, driving changes that boosted lead-to-sale conversions by 15% and improved quarterly sales.\n• Designed interactive visualizations in Excel to present data trends over a period, facilitating easier comprehension.\n• Created an Excel database to manage and analyze investor data, ensuring precise data accessibility for decision makers.\n• Implemented a social media strategy- WhatsApp Campaign, resulted in 10% increase in website visits within a month.\n• Researched and generated compelling topics, crafted well-researched 5+ healthcare articles on latest topics for website.\n\nEDUCATION\nBirla Institute of Technology and Science, Pilani\nBachelor of Pharmacy | Aug. 2019 – May 2023\nPilani, Rajasthan\n\nPROJECTS\n\nE-com Orders | Power BI\n• Analyzed e-commerce order data to identify sales trends, customer behavior, and product performance.\n• Utilized Power BI for data cleaning, DAX calculations, and interactive dashboard creation.\n• Delivered actionable insights to optimize inventory management and marketing strategies.\n\nCovid-19 | Python (NumPy, Pandas)\n• Processed and visualized Covid-19 datasets to track infection rates, recoveries, and regional trends.\n• Applied data wrangling, aggregation, and visualization techniques using Python, NumPy, and Pandas.\n• Generated comprehensive reports to support public health decision-making.\n\nRetail Store | Advanced SQL\n• Conducted sales and inventory analysis for a retail store using advanced SQL queries (CTEs, Window Functions).\n• Built data models to monitor stock levels, sales performance, and customer segmentation.\n• Provided recommendations to improve stock replenishment and sales strategies.\n\nCERTIFICATIONS\nData Analytics | Coding Ninjas | 2026",
-    "job_relevance_score": 90,
+    "resume_text": "MOHAMMED YAHYA HUSSAIN  \nmohammedyahyahussain1998@gmail.com | +91-7349033579 | Karnataka, India | https://linkedin.com/in/mohammed-yahyahussain-551907250 | https://github.com/Mohammedyahyahussain  \n\nPROFESSIONAL SUMMARY  \nIntermediate Data Analyst with expertise in Python, SQL, Power BI, and Statistics, experienced in exploratory data analysis, KPI reporting, and data visualization for business optimization. Seeking to leverage analytical and technical skills for impactful data-driven decision-making in data analytics roles.  \n\nTECHNICAL SKILLS  \n• Programming & Languages: Python (Pandas, NumPy, Matplotlib, Seaborn), SQL, JavaScript  \n• Data Visualization: Power BI, Excel Dashboards, Matplotlib, Seaborn  \n• Soft Skills: Analytical Thinking, Problem Solving, Attention to Detail, Communication, Data Storytelling  \n• Other Tools: Power Query, Jupyter Notebook  \n \nPROFESSIONAL EXPERIENCE  \nSparklex Technologies | Aug 2023 – Present  \nData Analyst | Bangalore, Karnataka  \n• Monthly revenue trends revealed flat growth despite rising subscriptions, prompting an investigation into churn drivers and customer profitability.  \n• Unified 4+ disparate datasets (billing, usage, customer, support) using SQL — leveraging joins, CTEs, and window functions — improving data availability and reducing query time.  \n• Applied churn logic (inactive >90 days, repeated late payments) and performed data validation in Excel through pivots and formulas, improving confidence in the analysis.  \n• Built 3 interactive Power BI dashboards with advanced DAX measures for churn percentage, Average Revenue Per User (ARPU), and Customer Lifetime Value (CLV), reducing dependency on manual Excel reports and accelerating decision-making.  \n• Applied Python pandas, numpy, matplotlib to automate simple data preparation tasks and generate exploratory charts, providing quick checks and visual insights that supported the main Excel and Power BI reporting.  \n• Presented analysis of churn patterns and customer segments, providing clarity on key risk factors and contributing to retention improvement efforts.  \n• Participated in regular meetings to resolve issues and offered technical support to the team.  \n\nPROJECTS  \nPhonePe Digital Payments Dataset | Python | GitHub: https://github.com/Mohammedyahyahussain/PhonePe-Python | Sept 2025  \n• Consolidated 2018–2021 multi-sheet payment datasets, applied Pandas/NumPy, ensuring standardized structure and reliable insights.  \n• Evaluated state and district payment behavior, applied SQL-style grouping, uncovering demographic patterns and adoption correlations.  \n• Automated Matplotlib visualizations, generated dynamic charts, enabling stakeholders to identify growth opportunities and mitigate churn.  \n\nSocial Media Ad Campaign Performance | Power BI | Github: https://github.com/Mohammedyahyahussain/Social-Media-Ad-Campaign-PBI | Sept 2025  \n• Designed Power BI dashboard integrating 213M impressions data, enabling CTR and conversion insights across demographics.  \n• Analyzed demographic spend patterns using DAX, uncovering male 30–34 efficiency and female 45–49 inefficiency for budget optimization.  \n• Exposed funnel drop-offs causing negative ROI, recommending spend reallocation and CTR improvements for campaign performance.  \n\nE Commerce | SQL | Github: https://github.com/Mohammedyahyahussain/E-Commerce-SQL | Aug 2025  \n• Analyzed 100K+ transactional records by designing complex SQL queries, revealing customer purchase trends.  \n• Performed RFM (Recency, Frequency, and Monetary) analysis for segmentation, classifying customers, and identifying churn risks to guide proactive interventions.  \n• Delivered actionable insights through SQL-driven retention strategies, boosting repeat purchases and enhancing engagement metrics significantly.  \n\nCPI Inflation | Advanced Excel | Github: https://github.com/Mohammedyahyahussain/CPI_Inflation | July 2025  \n• Analyzed CPI drivers by grouping categories, applied statistical formulas, delivered accurate contribution insights.  \n• Developed automated Excel dashboards, integrated SUMIFS, VLOOKUP, pivots, enabled efficient data-driven comparisons.  \n• Identified dominant contributors and forecasted trends with models, supported strategic planning and inventory adjustments.  \n\nLoan Default | Python  \n• Performed comprehensive exploratory data analysis on Superstore sales dataset with 21 features to uncover business insights through systematic data cleaning, feature engineering, and customer segmentation.  \n• Applied statistical techniques including outlier detection, correlation analysis, and quintile-based segmentation to identify profitable and loss-making products and customer groups.  \n• Created multi-dimensional visualizations (heatmaps, scatter plots, violin plots) to reveal sales-profit relationships and regional performance patterns.  \n\nEDUCATION  \nVisvesvaraya Technological University (VTU), Karnataka  \nBE in Computer Science | 2018 – 2023  \nCGPA: 7.47  \n\nCERTIFICATIONS  \nData Analytics | Coding Ninjas | 2024 – 2025  \nCertificate Link: https://drive.google.com/file/d/1N9IHjoRV54Ss5ugK0MZ4vAcjpritTq7i/view",
+    "job_relevance_score": 88,
     "ats_score": 93,
     "skills_added": [
-      "Power BI",
-      "Python",
-      "NumPy",
-      "Pandas"
+      "Statistics",
+      "Power Query",
+      "Generative AI"
     ],
-    "skills_enhanced": [
-      "SQL → Advanced SQL (CTEs, Window Functions, Stored Procedures, Triggers)",
-      "Excel → Advanced Excel (Power Query, AI Tools in Excel, Data Transformation)"
-    ],
+    "skills_enhanced": [],
     "projects_added": [
-      "E-com Orders",
-      "Covid-19",
-      "Retail Store"
+      "Loan Default"
     ],
-    "modification_summary": "Enhanced 2 skills, added 4 skills, incorporated 3 projects, improving overall DA job readiness by 100%."
+    "modification_summary": "Added 3 skills, incorporated 1 project, with no skills enhanced, improving overall DA job readiness by 100%."
   },
   "skill_strategy": {
-    "skills_to_enhance": [
-      {
-        "base": "SQL",
-        "enhanced": "Advanced SQL (CTEs, Window Functions, Stored Procedures, Triggers)",
-        "module": "Analytics with SQL"
-      },
-      {
-        "base": "Excel",
-        "enhanced": "Advanced Excel (Power Query, AI Tools in Excel, Data Transformation)",
-        "module": "Introduction to Data Analytics and Excel"
-      }
-    ],
+    "skills_to_enhance": [],
     "skills_to_add": [
       {
-        "skill": "Power BI",
-        "module": "Data Visualization with PowerBi"
+        "skill": "Statistics",
+        "module": "Statistics & EDA with Python"
       },
       {
-        "skill": "Python",
-        "module": "Python Programming"
+        "skill": "Power Query",
+        "module": "Introduction to Data Analytics and Excel"
       },
       {
-        "skill": "NumPy",
-        "module": "Python Programming"
-      },
-      {
-        "skill": "Pandas",
-        "module": "Python Programming"
+        "skill": "Generative AI",
+        "module": "Generative AI (Live lectures)"
       }
     ]
-  },
-  "learning_comparison": {
-    "conventional_learning": {
-      "timeline": [
-        {
-          "month": 0,
-          "progress": 0,
-          "milestone": "Start Learning"
-        },
-        {
-          "month": 2,
-          "progress": 15,
-          "milestone": "Basic SQL from YouTube"
-        },
-        {
-          "month": 4,
-          "progress": 30,
-          "milestone": "Python basics from blogs"
-        },
-        {
-          "month": 6,
-          "progress": 50,
-          "milestone": "Self-made projects"
-        },
-        {
-          "month": 8,
-          "progress": 65,
-          "milestone": "Still learning Power BI"
-        },
-        {
-          "month": 10,
-          "progress": 80,
-          "milestone": "Job applications start"
-        },
-        {
-          "month": 12,
-          "progress": 85,
-          "milestone": "Interview ready"
-        }
-      ]
-    },
-    "cn_course_learning": {
-      "timeline": [
-        {
-          "month": 0,
-          "progress": 0,
-          "milestone": "Enroll in CN Data Analytics Course"
-        },
-        {
-          "month": 1,
-          "progress": 35,
-          "milestone": "SQL Mastery + Python Fundamentals"
-        },
-        {
-          "month": 2,
-          "progress": 60,
-          "milestone": "Power BI & Data Visualization"
-        },
-        {
-          "month": 3,
-          "progress": 80,
-          "milestone": "Statistical Analysis + Projects"
-        },
-        {
-          "month": 4,
-          "progress": 95,
-          "milestone": "Capstone Project + Interview Prep"
-        },
-        {
-          "month": 5,
-          "progress": 100,
-          "milestone": "Job Ready + Placement Support"
-        }
-      ],
-      "modules_addressing_gaps": [
-        {
-          "gap": "NumPy",
-          "module": "Python Programming",
-          "timeline": "Week 1-4",
-          "description": "Skill development"
-        },
-        {
-          "gap": "Pandas",
-          "module": "Python Programming",
-          "timeline": "Week 1-4",
-          "description": "Skill development"
-        },
-        {
-          "gap": "Advanced SQL (CTEs, Window Functions, Stored Procedures, Triggers)",
-          "module": "Analytics with SQL",
-          "timeline": "Week 1-4",
-          "description": "Skill development"
-        }
-      ]
-    }
   },
   "market_stats": {
     "jobs_analyzed": 83,
@@ -194,72 +85,42 @@
         "demand": "Growing"
       }
     ],
-    "resume_has": 2,
+    "resume_has": 4,
     "curriculum_covers": 5
   },
   "curriculum_used": [
     {
-      "module": "Analytics with SQL",
+      "module": "Statistics & EDA with Python",
       "addresses_gaps": [
-        "Advanced SQL (CTEs, Window Functions, Stored Procedures, Triggers)"
+        "Statistics"
       ],
       "projects_included": [
-        "Retail Store"
-      ],
-      "skills_added_from_module": [],
-      "skills_enhanced_by_module": [
-        "SQL → Advanced SQL (CTEs, Window Functions, Stored Procedures, Triggers)"
-      ]
-    },
-    {
-      "module": "Introduction to Data Analytics and Excel",
-      "addresses_gaps": [
-        "Power Query",
-        "AI Tools in Excel",
-        "Data Transformation"
-      ],
-      "projects_included": [],
-      "skills_added_from_module": [],
-      "skills_enhanced_by_module": [
-        "Excel → Advanced Excel (Power Query, AI Tools in Excel, Data Transformation)"
-      ]
-    },
-    {
-      "module": "Data Visualization with PowerBi",
-      "addresses_gaps": [
-        "Power BI Fundamentals",
-        "Data Cleaning in Power BI",
-        "DAX Functions",
-        "Advanced DAX",
-        "Power BI Visualization",
-        "Report Creation",
-        "Data Storytelling"
-      ],
-      "projects_included": [
-        "E-com Orders"
+        "Loan Default"
       ],
       "skills_added_from_module": [
-        "Power BI"
+        "Statistics"
       ],
       "skills_enhanced_by_module": []
     },
     {
-      "module": "Python Programming",
+      "module": "Introduction to Data Analytics and Excel",
       "addresses_gaps": [
-        "Python Operators",
-        "NumPy",
-        "Pandas",
-        "Matplotlib & Seaborn",
-        "Python Functions",
-        "Exception Handling"
+        "Power Query"
       ],
-      "projects_included": [
-        "Covid-19"
-      ],
+      "projects_included": [],
       "skills_added_from_module": [
-        "Python",
-        "NumPy",
-        "Pandas"
+        "Power Query"
+      ],
+      "skills_enhanced_by_module": []
+    },
+    {
+      "module": "Generative AI (Live lectures)",
+      "addresses_gaps": [
+        "Generative AI"
+      ],
+      "projects_included": [],
+      "skills_added_from_module": [
+        "Generative AI"
       ],
       "skills_enhanced_by_module": []
     }

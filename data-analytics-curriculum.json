@@ -3,98 +3,153 @@
     {
       "module": "Introduction to Data Analytics and Excel",
       "skills": [
-        "Data Analytics Fundamentals",
         "Data Cleaning",
-        "Excel Operations & Formatting",
+        "Excel Operations",
+        "Excel Formatting",
         "Data Extraction",
         "Excel LOOKUPs",
         "AI Tools in Excel",
-        "Handling Missing Values & Outliers",
+        "Handling Missing Values",
+        "Handling Outliers",
         "Data Charting",
-        "Univariate & Bivariate Analysis",
+        "Univariate Analysis", 
+        "Bivariate Analysis",
         "Power Query",
         "Data Transformation"
       ],
       "caseStudies": [
-        "National Air Quality",
-        "US Healthcare Dataset",
-        "India CPI Inflation"
+        {
+          "name": "National Air Quality",
+          "description": null
+        },
+        {
+          "name": "US Healthcare Dataset",
+          "description": {
+            "projectOverview": "Analyzed healthcare data to examine relationships between patient demographics, medical conditions, admission types, and costs, delivering actionable insights for hospital resource optimization and patient insurance selection.",
+            "technicalSkills": "Excel advanced functions (SUMIFS, AVERAGEIFS, COUNTIFS), Power Query, pivot tables, data transformation, correlation analysis, hypothesis testing, demographic segmentation, time series analysis, data visualization, statistical analysis",
+            "analysisTechniques": "Created demographic segments using MECE framework; performed univariate and multivariate analysis via pivot tables and formula-based tables; applied correlation functions and hypothesis testing to validate cost relationships; conducted time series analysis of disease progression patterns; used data encoding for categorical variable analysis",
+            "impactOutcomes": "**For Patients:** Identified optimal insurance-medical condition combinations to reduce costs (e.g., Medicare vs. Aetna for cancer treatment). **For Hospitals:** Optimized resource allocation by identifying low-volume periods for elective procedures; enabled strategic medication pre-ordering; improved capacity planning and financial forecasting through admission pattern analysis"
+          }
+        },
+        {
+          "name": "India CPI Inflation",
+          "description": {
+            "projectOverview": "Conducted comprehensive inflation analysis using India's Consumer Price Index data to identify sector contributions, inflation trends, and impact of external factors (COVID-19, oil prices) on price movements across rural and urban demographics.",
+            "technicalSkills": "Excel data manipulation, pivot tables, correlation analysis, time series analysis, year-over-year growth calculations, month-over-month trend analysis, data visualization (bar graphs, heatmaps, line charts), statistical aggregation",
+            "analysisTechniques": "Performed sector-wise contribution analysis to CPI basket; calculated YoY and MoM inflation growth rates; conducted correlation analysis between oil prices and sector inflation (2021-2023); analyzed pandemic impact on healthcare, food, and essential services; identified food subcategory contributions using absolute price change analysis",
+            "impactOutcomes": "Identified Food sector as highest CPI contributor (46.9%); discovered 2022 had peak inflation at 6.60%; determined spices and cereals were top inflation drivers (cyclone damage, demand surge); established strong correlation (84%) between oil prices and transport/meat & fish sectors; revealed healthcare costs surged significantly during COVID-19 period"
+          }
+        }
       ]
     },
     {
       "module": "Data Visualization with PowerBi",
       "skills": [
-        "Business Intelligence Concepts",
-        "Power BI Fundamentals",
-        "Data Cleaning in Power BI",
-        "AI Tools in Power BI",
+        "Business Intelligence",
+        "Data Cleaning",
         "Data Modelling",
         "DAX Functions",
         "Advanced DAX",
         "Power BI Visualization",
         "Report Creation",
         "Data Storytelling",
-        "Power BI Service & AI Insights",
-        "Row Level Security (RLS)",
+        "Power BI Architecture",
+        "Power BI Service",
+        "Power BI AI Insights",
         "KPIs"
       ],
       "caseStudies": [
-        "E-com Orders"
+        {
+          "name": "E-com Orders",
+          "description": {
+            "projectOverview": "Built comprehensive Power BI dashboard analyzing e-commerce sales performance, sales team targets, customer behavior, and geographic distribution to drive business insights and optimize sales strategies.",
+            "technicalSkills": "Power Query data cleaning, DAX (SUMX, FILTER, SWITCH, RELATED functions), data modeling with bidirectional relationships, calculated columns and measures, data visualization (charts, maps, matrices), drill-through functionality, bookmarks, mobile view design, Q&A visuals",
+            "analysisTechniques": "Cleaned data by removing null rows and replacing missing order sources; created sales manager performance buckets using SWITCH function; established 1:many bidirectional relationships between Orders, Sales Targets, and Customers tables; developed target completion metrics and MoM growth analysis; segmented customers by order frequency and spending patterns; implemented drill-through pages for detailed analysis",
+            "impactOutcomes": "Identified Noah Meier as top performer exceeding target by ~8%; revealed 14% of customers never placed orders; discovered geographic sales patterns by country and order source; enabled sales team performance tracking against targets; created interactive mobile-friendly dashboards with team-specific filtered views; provided actionable insights for customer retention and sales optimization strategies"
+          }
+        }
       ]
     },
     {
       "module": "Analytics with SQL",
       "skills": [
-        "Database Fundamentals",
-        "MySQL Workbench",
         "Advanced SQL Querying",
         "CRUD Operations",
         "Schema Management",
-        "SQL String Operations",
+        "String Operations",
         "Aggregate Functions",
-        "Joins & ER Modelling",
+        "Joins",
+        "ER Modelling",
         "Complex Query Writing",
         "Case Statements",
-        "CTEs & Subqueries",
-        "SQL Date Manipulation",
+        "CTEs",
+        "Subqueries",
+        "Date Manipulation",
         "Window Functions",
-        "Views & Indexing",
-        "Stored Procedures & Triggers",
-        "TCL & DCL Commands"
+        "Views",
+        "Indexing",
+        "Stored Procedures",
+        "Triggers",
+        "TCL Commands",
+        "DCL Commands"
       ],
       "caseStudies": [
-        "Retail Store",
-        "E-Com Business"
+        {
+          "name": "Retail Store",
+          "description": {
+            "projectOverview": "Performed end-to-end SQL analytics on retail sales data to identify product performance, segment customers, analyze purchasing behavior, and provide actionable recommendations for inventory management and targeted marketing campaigns.",
+            "technicalSkills": "Data cleaning (duplicate removal, null handling, price reconciliation), SQL joins, aggregate functions (SUM, COUNT, AVG), GROUP BY and HAVING clauses, date casting and manipulation, CTEs (Common Table Expressions), window functions (LAG), CASE statements for segmentation, subqueries",
+            "analysisTechniques": "Removed duplicates and fixed price discrepancies between sales and inventory tables; replaced null values with appropriate defaults; performed univariate analysis on product categories and customer purchase frequency; conducted correlation analysis to identify high/low sales products; calculated MoM growth rates using LAG window function; segmented customers based on purchase quantity (Low: 1-10, Mid: 11-30, High: >30); analyzed repeat purchase patterns and loyalty indicators using date differences",
+            "impactOutcomes": "Identified top 10 high-revenue and low-performing products for inventory optimization; segmented customer base into actionable categories for targeted marketing; discovered repeat purchase patterns to improve retention strategies; calculated loyalty metrics based on first-to-last purchase duration; provided sales trend analysis with MoM growth rates; enabled data-driven decisions for product focus and customer engagement strategies"
+          }
+        },
+        {
+          "name": "E-Com Business",
+          "description": {
+            "projectOverview": "Conducted comprehensive SQL analysis across customers, products, orders, and order details to derive actionable insights for marketing segmentation, product performance, sales optimization, and inventory management in e-commerce operations.",
+            "technicalSkills": "Advanced SQL querying, aggregate functions, GROUP BY with HAVING, subqueries, window functions (LAG for MoM analysis), joins across multiple tables, customer segmentation queries, percentile calculations, date functions for trend analysis",
+            "analysisTechniques": "Performed market segmentation by identifying top cities with highest customer concentrations; analyzed customer engagement depth through order distribution patterns; identified premium products with low quantity but high revenue; calculated category-wise customer reach; conducted MoM sales trend and average order value fluctuation analysis; determined inventory turnover rates; identified low-engagement products (<5% customer base); tracked customer acquisition trends and peak sales periods",
+            "impactOutcomes": "Enabled targeted marketing strategies through identification of top 3 key markets; segmented customers into one-time buyers, occasional shoppers, and regulars; uncovered premium product trends for pricing optimization; identified categories with wider customer appeal; provided sales growth insights for strategic planning; optimized inventory management by identifying fast-turnover and low-engagement products; informed staffing and stock decisions through peak period identification; enhanced customer acquisition effectiveness measurement"
+          }
+        }
       ]
     },
     {
       "module": "Python Programming",
       "skills": [
-        "Python Operators",
-        "String Manipulation",
-        "Conditional Statements",
-        "Loops",
-        "Control Flow",
-        "Python Functions",
-        "Exception Handling",
         "Python Modules",
         "File Handling",
         "NumPy",
         "Statistical Analysis with NumPy",
         "Pandas Series",
         "Pandas Data Manipulation",
-        "Matplotlib & Seaborn",
-        "Database Connectivity"
+        "Matplotlib",
+        "Seaborn"
       ],
       "caseStudies": [
-        "Covid-19",
-        "PhonePe Digital Payments"
+        {
+          "name": "Covid-19",
+          "description": {
+            "projectOverview": "Analyzed COVID-19 pandemic data across 276+ geographic regions (Jan 2020 - May 2021) to track disease spread, mortality rates, and recovery patterns, providing insights into pandemic dynamics and regional healthcare responses.",
+            "technicalSkills": "Python (Pandas, NumPy, Matplotlib), CSV data loading, data exploration and info methods, time series plotting, data imputation (forward filling), wide-to-long format transformation, multi-dataset merging, groupby aggregations, datetime conversion, monthly resampling",
+            "analysisTechniques": "Loaded and explored three datasets (confirmed cases, deaths, recoveries); handled missing values using forward fill for time-series continuity; transformed wide format to long format for temporal analysis; merged datasets on Country/Region and Date; calculated daily new cases using diff() function; computed recovery and death rates; performed peak surge analysis; conducted monthly trend analysis with resampling; compared cross-country pandemic management metrics",
+            "impactOutcomes": "Identified peak single-day surge dates for Germany, France, and Italy; compared Canada vs. Australia recovery rates (Dec 2020) to assess pandemic management effectiveness; analyzed provincial death rate distributions in Canada; tracked monthly recovery ratios for US (Mar 2020 - May 2021); discovered countries with highest average death rates throughout 2020; provided data-driven insights for resource allocation and policy decisions during unprecedented health crisis"
+          }
+        },
+        {
+          "name": "PhonePe Digital Payments",
+          "description": {
+            "projectOverview": "Analyzed PhonePe transaction and demographic data across Indian states and districts (Q1 2018 - Q2 2021) to uncover digital payment trends, device usage patterns, and correlations between demographics and transaction behavior.",
+            "technicalSkills": "Python (Pandas, NumPy, Matplotlib), multi-sheet Excel data loading, data aggregation and groupby operations, data merging across datasets, correlation analysis, time series visualization, statistical summary generation, CSV export, scatter plots, bar charts, line plots, pie charts",
+            "analysisTechniques": "Loaded and explored 5 datasets (state transactions, transaction splits, device data, district transactions, demographics); calculated transaction volumes, ATVs, and app opens trends; identified most common transaction types and device brands per state; performed data quality checks comparing state vs. district aggregations; merged datasets to analyze user-to-population ratios, population density correlations, and device brand usage; conducted temporal trend analysis; performed multivariate regression analysis; applied time series forecasting using Exponential Smoothing",
+            "impactOutcomes": "Identified top/bottom 5 states by transaction volume and ATV; discovered highest population districts per state; revealed app usage trends and transaction type distributions across quarters; established correlation between population density and transaction volume; calculated average transaction amount per user by state; determined device brand penetration patterns; validated data consistency between aggregation levels; provided insights for regional market strategies and user acquisition; enabled forecasting of future transaction trends"
+          }
+        }
       ]
     },
     {
       "module": "Statistics & EDA with Python",
       "skills": [
-        "Statistical Fundamentals",
         "Data Collection Techniques",
         "Sampling & Measures of Central Tendency",
         "Measures of Dispersion",
@@ -106,9 +161,33 @@
         "Statistical Tests"
       ],
       "caseStudies": [
-        "Loan Default",
-        "Pro Kabaddi League",
-        "Superstore Sales"
+        {
+          "name": "Loan Default",
+          "description": {
+            "projectOverview": "Developed Power BI solution integrating customer demographics, loan applications, and credit bureau data to analyze lending patterns, calculate key financial metrics, and support strategic risk management decisions.",
+            "technicalSkills": "Power Query (merge/append queries, conditional columns, pivot/unpivot operations), custom column creation, data transformation, grouping and aggregation, filtering, value replacement, data type standardization, measure calculations",
+            "analysisTechniques": "Merged customer and loan datasets to analyze average loan amounts by employment type; consolidated multi-month bureau data and calculated net credit utilization; created conditional columns to flag delayed loan processing (>15 days); pivoted loan types to show total amounts per customer; replaced bureau IDs for low credit scores (<400); grouped by region to calculate default percentages; unpivoted monthly income/expenses for metric analysis; computed approval ratios and delinquent-to-closed account ratios",
+            "impactOutcomes": "Enabled employment-based loan amount analysis for targeted product offerings; identified processing delays to improve operational efficiency; provided credit utilization insights for risk assessment; segmented regional default patterns for localized risk strategies; standardized data formats for consistent reporting; calculated approval ratios to evaluate lending effectiveness and optimize loan approval processes"
+          }
+        },
+        {
+          "name": "Pro Kabaddi League",
+          "description": {
+            "projectOverview": "Conducted comprehensive exploratory data analysis on Pro Kabaddi League match events dataset to uncover gameplay patterns, player performance insights, and team strategies using advanced Python data analysis techniques.",
+            "technicalSkills": "Python (Pandas, NumPy, Matplotlib, Seaborn), data loading (CSV, Excel, SQL), data cleaning and type conversion, missing value imputation, outlier detection (IQR method, box plots), lambda functions, pivot tables with multiple aggregations, correlation analysis, univariate/bivariate/multivariate visualization (histograms, scatter plots, heatmaps, violin plots, joint plots)",
+            "analysisTechniques": "Loaded multi-sheet datasets and performed data type conversions; removed duplicates and handled 99% missing value columns; imputed missing values in points/ID columns using domain logic; ensured data consistency using lambda functions and string operations; identified outliers using IQR method with custom bounds; created calculated columns (defending_points validation); performed correlation matrix analysis; conducted n-variate analysis using pivot tables with row-wise, column-wise, and grand total percentages; visualized distributions using density plots and pair plots",
+            "impactOutcomes": "Established comprehensive EDA framework applicable to sports analytics; identified key performance indicators for raiders and defenders; uncovered player-event correlations through heatmap visualizations; segmented high-performing players using groupby aggregations; provided actionable insights on raid success patterns and defensive strategies; demonstrated when to avoid imputation (high missingness, NMAR data) to maintain data integrity"
+          }
+        },
+        {
+          "name": "Superstore Sales",
+          "description": {
+            "projectOverview": "Performed extensive EDA on Superstore sales dataset with 21 columns to uncover sales trends, customer segmentation patterns, and profitability insights through systematic data cleaning, feature engineering, and advanced visualization techniques.",
+            "technicalSkills": "Python (Pandas, NumPy, Matplotlib, Seaborn), duplicate removal, date normalization and extraction, missing value imputation, PII masking, data type conversion, string manipulation, outlier detection (3*IQR method), quintile-based segmentation, correlation analysis, label encoding, pivot tables, time series analysis, multi-dimensional visualizations",
+            "analysisTechniques": "Removed duplicates tracking impacted rows/Order IDs; normalized date formats and validated Order ID-year consistency; imputed Ship Mode using Days to Ship logic; masked customer names for PII protection; converted postal codes to standardized 5-character format; engineered features (Original Price, Total Sales/Profit, Discount Price, Shipping Urgency, Days Since Last Order); created customer-level aggregations merged back to dataset; applied 3*IQR outlier removal function; segmented customers into sales and profit quintiles with cross-tabulation analysis; performed category-segment pivot analysis; analyzed shipping urgency, regional profitability, discount impact, and temporal trends",
+            "impactOutcomes": "Identified top 10 most profitable and loss-making products; revealed sales-profit correlation patterns through regression analysis; segmented customers into quintiles to identify most valuable segments (top 20%); analyzed category-segment profitability combinations for targeted strategies; discovered shipping mode preferences and profitability by region; assessed discount impact on profitability to optimize pricing strategies; uncovered seasonal sales patterns and yearly growth trends; provided state-wise profitability insights with geographic correlation; enabled data-driven decision-making for inventory management, customer targeting, and promotional planning"
+          }
+        }
       ]
     },
     {
@@ -121,7 +200,15 @@
         "AI for Data Analysis & Visualization"
       ],
       "caseStudies": [
-        "Credit Risk Modelling"
+        {
+          "name": "Credit Risk Modelling",
+          "description": {
+            "projectOverview": "Performed comprehensive credit behavior analysis and risk assessment on client loan data to improve approval processes, identify high-risk clients, and optimize lending strategies through data-driven segmentation and predictive profiling.",
+            "technicalSkills": "Python (Pandas, NumPy), data validation and integrity checks, missing value imputation, data type standardization, winsorization for outlier capping, feature engineering, correlation analysis, univariate/bivariate statistical analysis, risk segmentation, visualization (histograms, scatter plots, bar plots, count plots)",
+            "analysisTechniques": "Validated client coverage across multiple datasets; removed duplicates and handled missing values using median imputation and logical rules; corrected inconsistent tradeline/enquiry temporal data; applied 99th percentile winsorization to cap extreme outliers; engineered features including loan approval rate, credit utilization rate, weighted enquiry score, and application frequency; segmented clients by credit activity (Low/Medium/High) and risk profile (Low/Medium/High); conducted bivariate analysis between tradelines-enquiries, spending-approvals, and application frequency-approval rates",
+            "impactOutcomes": "Identified data quality issues (duplicates, missing values, temporal inconsistencies) affecting <2% of records; created multi-dimensional risk profiles combining tradeline activity, enquiry patterns, and spending behavior; discovered correlation between credit activity and loan applications; segmented clients into actionable risk categories for targeted lending strategies; revealed approval rate patterns across different spending thresholds and application frequencies; enabled data-driven decision-making for loan approvals, fraud detection, and customer relationship management"
+          }
+        }
       ]
     }
   ]

@@ -2,76 +2,84 @@
   "full_analysis": {
     "experience_level": "Intermediate",
     "experience_considered": [
-      "Program Associate – Data Analytics at Coding Ninjas (Aug 2024 - Present)"
+      "Data Analyst at Sparklex Technologies (Aug 2023 - Present)"
     ],
-    "experience_reasoning": "Total: 16 months = 1.33 years. Program Associate – Data Analytics at Coding Ninjas (Aug 2024 - Present) = 16 months = 1.33 years",
+    "experience_reasoning": "Total: 28 months = 2.33 years. Data Analyst at Sparklex Technologies (Aug 2023 - Present) = 28 months = 2.33 years",
     "skills_analysis": {
       "has_skills": [
-        "SQL",
-        "Excel"
-      ],
-      "missing_skills": [
-        "Power BI",
-        "Python",
-        "NumPy",
-        "Pandas"
-      ]
-    },
-    "projects_analysis": {
-      "projects_to_keep": [],
-      "projects_to_remove": [
-        {
-          "title": "Review on Zomato IPO | Finance",
-          "duration": "Aug. 2021 – Dec. 2021",
-          "details": [
-            "Enhanced understanding of IPO procedures to contribute in gaining insights and understanding market sentiments",
-            "Conducted in-depth RHP analysis on financial statements, growth prospects, identifying key risks and opportunities",
-            "Presented thorough reports on company’s strengths, weaknesses and potential market performance post-IPO"
-          ]
-        }
-      ]
-    },
-    "keywords_analysis": {
-      "present_keywords": [
-        "NPS data",
-        "retention curve analysis",
-        "learner insights",
-        "SQL",
-        "Excel",
-        "Metabase",
-        "funnel analysis",
-        "interactive visualizations",
-        "Excel database",
-        "WhatsApp Campaign",
-        "RHP analysis",
-        "financial statements analysis",
-        "interactive dashboards",
-        "data flow optimization",
-        "automated system for schedules and feedback"
-      ],
-      "missing_keywords": [
-        "Power BI",
         "Python",
         "Pandas",
         "NumPy",
-        "Data Modeling",
-        "Power Query",
+        "Matplotlib",
+        "Seaborn",
+        "Excel",
+        "SQL",
+        "Power BI",
         "DAX",
+        "EDA"
+      ],
+      "missing_skills": [
+        "Statistics",
+        "Power Query",
+        "Generative AI"
+      ]
+    },
+    "projects_analysis": {
+      "projects_to_keep": [
+        "PhonePe Digital Payments Dataset",
+        "Social Media Ad Campaign Performance",
+        "E Commerce",
+        "CPI Inflation"
+      ],
+      "projects_to_remove": []
+    },
+    "keywords_analysis": {
+      "present_keywords": [
+        "CTEs",
+        "Window Functions",
+        "Joins",
+        "Aggregations",
+        "Subqueries",
+        "Pandas",
+        "NumPy",
+        "Matplotlib",
+        "Seaborn",
+        "Power BI",
+        "DAX",
+        "Pivot Tables",
+        "VLOOKUP",
+        "SUMIFS",
+        "RFM Analysis",
+        "KPI Reporting",
+        "Reporting Automation",
+        "Exploratory Data Analysis (EDA)",
+        "Statistical Formulas",
+        "Data Validation",
+        "Data Preparation Automation",
+        "SQL-style Grouping",
+        "Data Storytelling",
+        "Insight Generation"
+      ],
+      "missing_keywords": [
+        "Power Query",
+        "Data Modeling",
         "ETL",
         "AWS",
-        "R",
-        "Data Visualization (tools like Tableau, Power BI)",
-        "Window Functions",
-        "CTEs"
+        "Generative AI",
+        "Advanced Statistical Techniques",
+        "Data Warehousing",
+        "Tableau",
+        "Big Data Tools",
+        "Machine Learning"
       ]
     },
     "ats_analysis": {
-      "reasoning": "The resume uses a simple single-column format with clear section headers and consistent date formatting. Contact details are complete and placed at the top. However, some special characters and formatting issues (e.g., encoding artifacts) may slightly reduce ATS parsing accuracy."
+      "reasoning": "The resume uses a simple single-column format with clear section headers and consistent date formatting. Contact info is complete and placed at the top. No tables or graphics are present, enhancing ATS parseability."
     },
     "scores": {
-      "job_relevance_score": 65,
-      "ats_score": 80,
-      "score_reasoning": "Good core skills in SQL and Excel with quantifiable achievements, but missing key market-demanded tools like Python and Power BI. ATS-friendly format with minor formatting issues."
+      "job_relevance_score": 82,
+      "ats_score": 90,
+      "score_reasoning": "Strong relevant skills and projects with quantification; minor missing advanced skills. ATS-friendly format with good keyword integration and structure."
     },
     "job_market_analysis": {
       "jobs_analyzed": 83,
@@ -88,6 +96,6 @@
         "R (appears in 8.43%) - Demand: Growing"
       ]
     },
-    "analysis_summary": "Resume shows solid SQL and Excel skills with measurable impact but lacks Python, Power BI, and advanced analytics tools, limiting competitiveness. ATS format is good but minor encoding issues exist."
+    "analysis_summary": "Resume demonstrates strong intermediate-level skills and relevant projects with quantification. Minor gaps in advanced tools and emerging technologies exist. ATS compatibility is high due to clean formatting and keyword usage."
   }
 }

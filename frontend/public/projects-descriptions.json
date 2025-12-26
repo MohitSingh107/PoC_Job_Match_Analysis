@@ -1,0 +1,53 @@
+{
+  "projects": [
+    {
+      "name": "National Air Quality",
+      "description": "A project exploring national air quality data to understand pollution levels and environmental factors across different regions."
+    },
+    {
+      "name": "US Healthcare Dataset",
+      "description": "A project examining US healthcare data to understand how patient demographics, medical conditions, and admission types relate to healthcare costs."
+    },
+    {
+      "name": "India CPI Inflation",
+      "description": "A project analyzing India's Consumer Price Index to understand inflation trends, sector contributions, and how external factors like COVID-19 and oil prices affect prices."
+    },
+    {
+      "name": "E-com Orders",
+      "description": "A project creating a Power BI dashboard to visualize e-commerce sales performance, track sales team targets, and understand customer behavior across different regions."
+    },
+    {
+      "name": "Retail Store",
+      "description": "A project using SQL to analyze retail sales data, understand product performance, customer purchasing patterns, and identify opportunities for better inventory management."
+    },
+    {
+      "name": "E-Com Business",
+      "description": "A project using SQL to analyze e-commerce operations including customer behavior, product performance, sales trends, and inventory patterns."
+    },
+    {
+      "name": "Covid-19",
+      "description": "A project analyzing COVID-19 data from over 276 regions to track how the disease spread, recovery rates, and mortality patterns varied across different countries and time periods."
+    },
+    {
+      "name": "PhonePe Digital Payments",
+      "description": "A project exploring PhonePe digital payment transactions across Indian states and districts to understand payment trends, device usage, and how demographics influence transaction behavior."
+    },
+    {
+      "name": "Loan Default",
+      "description": "A project analyzing Superstore sales data to understand sales patterns, customer segments, profitability factors, and regional performance differences."
+    },
+    {
+      "name": "Pro Kabaddi League",
+      "description": "A project analyzing Pro Kabaddi League match data to understand gameplay patterns, player performance metrics, and team strategies."
+    },
+    {
+      "name": "Superstore Sales",
+      "description": "A project exploring Superstore sales data to understand sales trends, identify customer segments, and analyze what drives profitability across different categories and regions."
+    },
+    {
+      "name": "Credit Risk Modelling",
+      "description": "A project analyzing client loan data to understand credit behavior patterns, assess risk levels, and identify factors that influence loan approval decisions."
+    }
+  ]
+}
+
